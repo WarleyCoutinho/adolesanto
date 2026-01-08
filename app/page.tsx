@@ -1,0 +1,470 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import DownloadReportButton from "../components/DownloadReportButton";
+import { DonationItem, donationItems } from "./data";
+
+export default function Home() {
+    const [donationType, setDonationType] = useState<string>("");
+  const [items, setItems] = useState<DonationItem[]>([]);
+  const [selectedDay, setSelectedDay] = useState<string>("Todos");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<DonationItem | null>(null);
+  const [donorName, setDonorName] = useState("");
+  const [donorPhone, setDonorPhone] = useState("");
+  const [donorObs, setDonorObs] = useState("");
+  const [confirmAlert, setConfirmAlert] = useState(false);
+
+  // Debounce para salvar localStorage
+  const [pixFile, setPixFile] = useState<string>("");
+  let saveTimeout: NodeJS.Timeout | null = null;
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("adolesanto-donations");
+        if (stored) {
+          setItems(JSON.parse(stored));
+        } else {
+          setItems(donationItems);
+        }
+      } catch (e) {
+        setItems(donationItems);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && items.length > 0) {
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        try {
+          localStorage.setItem("adolesanto-donations", JSON.stringify(items));
+          setPixFile("");
+        } catch (e) {
+          // Falha ao salvar, pode logar ou ignorar
+        }
+      }, 300);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
+  const days = ["Todos", "Sexta-feira 06/02", "Sábado 07/02", "Domingo 08/02"];
+
+  const filteredItems =
+    selectedDay === "Todos"
+      ? items
+      : items.filter((item) => item.day === selectedDay);
+
+  const groupedItems = filteredItems.reduce((acc, item) => {
+    const key = `${item.day} - ${item.meal}`;
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    acc[key].push(item);
+    return acc;
+  }, {} as Record<string, DonationItem[]>);
+
+  const totalItems = items.length;
+  const donatedItems = items.filter((item) => item.donated).length;
+  const progressPercentage = Math.round((donatedItems / totalItems) * 100);
+
+  const handleDonate = (item: DonationItem) => {
+    setSelectedItem(item);
+    setDonorName(item.donorName);
+    setModalOpen(true);
+  };
+
+  const confirmDonation = () => {
+    if (selectedItem && donorName.trim() && donorPhone.trim()) {
+      const now = new Date();
+      const dateStr = now.toLocaleString();
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === selectedItem.id
+            ? {
+                ...item,
+                donated: true,
+                donorName: donorName.trim(),
+                donorPhone: donorPhone.trim(),
+                donorObs: donorObs.trim(),
+                donationDate: dateStr,
+              }
+            : item
+        )
+      );
+      setModalOpen(false);
+
+      setDonorName("");
+      setDonorPhone("");
+      setDonorObs("");
+      setSelectedItem(null);
+      setConfirmAlert(false);
+    }
+  };
+
+  const cancelDonation = (item: DonationItem) => {
+    // Não permitir cancelar após confirmação
+    // setItems((prevItems) =>
+    //   prevItems.map((i) =>
+    //     i.id === item.id ? { ...i, donated: false, donorName: "" } : i
+    //   )
+    // );
+    alert("A doação já foi confirmada e não pode ser cancelada.");
+  };
+
+  return (
+    <div className="min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 pt-8 flex justify-end">
+        <DownloadReportButton items={items} />
+      </div>
+      {/* Decorative Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-64 h-64 bg-blue-200 rounded-full opacity-20 blur-3xl animate-float"></div>
+        <div
+          className="absolute bottom-40 right-20 w-80 h-80 bg-yellow-200 rounded-full opacity-20 blur-3xl animate-float"
+          style={{ animationDelay: "2s" }}
+        ></div>
+        <div
+          className="absolute top-1/2 left-1/3 w-72 h-72 bg-blue-100 rounded-full opacity-15 blur-3xl animate-float"
+          style={{ animationDelay: "4s" }}
+        ></div>
+      </div>
+
+      {/* Header */}
+      <header className="relative pt-12 pb-8 px-4">
+        <div className="max-w-6xl mx-auto text-center">
+          <div className="inline-block mb-6 animate-fade-in">
+            <div className="halo-effect">
+              <h1 className="text-5xl md:text-7xl font-bold text-[#1e3a8a] mb-2 wing-decoration">
+                Adolesanto
+              </h1>
+            </div>
+            <p className="text-2xl md:text-3xl text-[#d4af37] font-semibold italic">
+              Santíssima Trindade
+            </p>
+          </div>
+
+          <p className="text-xl md:text-2xl text-gray-700 mb-3 font-medium">
+            06, 07 e 08 de fevereiro
+          </p>
+
+          <div className="inline-block bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] text-white px-8 py-3 rounded-full shadow-lg">
+            <p className="text-lg font-semibold">Organização das Refeições</p>
+          </div>
+        </div>
+      </header>
+
+      {/* Progress Section */}
+      <section className="max-w-6xl mx-auto px-4 py-8 animate-slide-up">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border-4 border-[#d4af37]/30">
+          <h2 className="text-3xl md:text-4xl font-bold text-center text-[#1e3a8a] mb-6">
+            Progresso das Doações
+          </h2>
+
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-lg font-semibold text-gray-700">
+                {donatedItems} de {totalItems} itens doados
+              </span>
+              <span className="text-3xl font-bold text-[#d4af37]">
+                {progressPercentage}%
+              </span>
+            </div>
+
+            <div className="relative h-12 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+              <div
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#1e3a8a] via-[#3b82f6] to-[#d4af37] transition-all duration-1000 ease-out rounded-full"
+                style={{ width: `${progressPercentage}%` }}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {progressPercentage === 100 && (
+            <div className="text-center py-4 bg-gradient-to-r from-[#d4af37]/20 to-[#1e3a8a]/20 rounded-2xl border-2 border-[#d4af37]">
+              <p className="text-2xl font-bold text-[#1e3a8a]">
+                🎉 Meta alcançada! Obrigado a todos! 🙏
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Day Filter */}
+      <section className="max-w-6xl mx-auto px-4 py-6">
+        <div className="flex flex-wrap gap-3 justify-center">
+          {days.map((day) => (
+            <button
+              key={day}
+              onClick={() => setSelectedDay(day)}
+              className={`px-6 py-3 rounded-full font-semibold text-lg transition-all duration-300 shadow-lg hover:scale-105 ${
+                selectedDay === day
+                  ? "bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] text-white shadow-xl"
+                  : "bg-white text-[#1e3a8a] hover:bg-gray-50"
+              }`}
+            >
+              {day}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Donation Items */}
+      <section className="max-w-6xl mx-auto px-4 py-8 pb-16">
+        {Object.entries(groupedItems).map(([groupKey, groupItems]) => {
+          const categoryDonated = groupItems.filter(
+            (item) => item.donated
+          ).length;
+          const categoryTotal = groupItems.length;
+          const categoryProgress = Math.round(
+            (categoryDonated / categoryTotal) * 100
+          );
+
+          return (
+            <div key={groupKey} className="mb-12 animate-slide-up">
+              <div className="bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] rounded-t-3xl p-6 shadow-xl">
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                  {groupKey}
+                </h3>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-4 bg-white/30 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#d4af37] transition-all duration-500"
+                      style={{ width: `${categoryProgress}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-white font-bold text-lg">
+                    {categoryProgress}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-white/90 backdrop-blur-sm rounded-b-3xl shadow-xl p-6 border-4 border-t-0 border-[#1e3a8a]/20">
+                <div className="grid gap-4">
+                  {groupItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`p-5 rounded-2xl border-2 transition-all duration-300 ${
+                        item.donated
+                          ? "bg-gradient-to-r from-green-50 to-green-100 border-green-400 shadow-md"
+                          : "bg-white border-gray-200 hover:border-[#d4af37] hover:shadow-lg"
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <p
+                            className={`text-lg font-semibold ${
+                              item.donated ? "text-green-800" : "text-gray-800"
+                            }`}
+                          >
+                            {item.name}
+                          </p>
+                          {item.donated && item.donorName && (
+                            <p className="text-sm text-green-600 mt-1 font-medium">
+                              ✓ Doado por: {item.donorName}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Se já doado, não exibe botão Cancelar */}
+                        {!item.donated && (
+                          <button
+                            onClick={() => handleDonate(item)}
+                            className="px-6 py-2 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] hover:from-[#3b82f6] hover:to-[#1e3a8a] text-white font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+                          >
+                            Doar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </section>
+
+      {/* Contact Info */}
+      <footer className="max-w-6xl mx-auto px-4 py-12 text-center">
+        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border-4 border-[#d4af37]/30">
+          <h3 className="text-2xl font-bold text-[#1e3a8a] mb-6">
+            Colabore com este momento de comunhão
+          </h3>
+
+          <div className="space-y-3 mb-6">
+            <p className="text-lg text-gray-700">
+              <strong>📞 Contato (WhatsApp):</strong>
+            </p>
+            <p className="text-xl font-semibold text-[#3b82f6]">
+              (62) 99248-6492 | (62) 99248-6496
+            </p>
+          </div>
+
+          <div className="space-y-3 mb-8">
+            <p className="text-lg text-gray-700">
+              <strong>💰 PIX (Doações em dinheiro):</strong>
+            </p>
+            <p className="text-xl font-semibold text-[#3b82f6]">
+              (62) 99468-9297
+            </p>
+            <p className="text-gray-700">Banco: Neon Pagamentos S.A.</p>
+            <p className="text-gray-700">Warley Coutinho Pereira dos Santos</p>
+          </div>
+
+          <div className="border-t-2 border-[#d4af37]/30 pt-6">
+            <p className="text-lg italic text-gray-600">
+              "Cada um contribua conforme o impulso do seu coração."
+            </p>
+            <p className="text-sm text-gray-500 mt-2">(2 Coríntios 9,7)</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Donation Modal */}
+      {modalOpen && selectedItem && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-slide-up border-4 border-[#d4af37]">
+            <h3 className="text-2xl font-bold text-[#1e3a8a] mb-4">
+              Confirmar Doação
+            </h3>
+            <p className="text-gray-700 mb-6 text-lg">
+              <strong>Item:</strong> {selectedItem.name}
+            </p>
+            <div className="mb-4">
+              <label className="block text-gray-700 font-semibold mb-2 text-lg">
+                Seu nome <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={donorName}
+                onChange={(e) => setDonorName(e.target.value)}
+                placeholder="Digite seu nome"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg"
+                autoFocus
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-700 font-semibold mb-2 text-lg">
+                Telefone <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                value={donorPhone}
+                onChange={(e) => setDonorPhone(e.target.value)}
+                placeholder="Digite seu telefone"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-700 font-semibold mb-2 text-lg">Tipo de doação <span className="text-red-500">*</span></label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="donationType"
+                    value="Item"
+                    checked={donationType === "Item"}
+                    onChange={() => setDonationType("Item")}
+                  />
+                  {selectedItem.name}
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="donationType"
+                    value="PIX"
+                    checked={donationType === "PIX"}
+                    onChange={() => setDonationType("PIX")}
+                  />
+                  PIX
+                </label>
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-700 font-semibold mb-2 text-lg">Observação (opcional)</label>
+              <input
+                type="text"
+                value={donorObs}
+                onChange={(e) => setDonorObs(e.target.value)}
+                placeholder="Observação"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg"
+              />
+            </div>
+            {donationType === "PIX" && (
+              <div className="mb-4">
+                <label className="block text-gray-700 font-semibold mb-2 text-lg">Comprovante PIX <span className="text-red-500">*</span></label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setPixFile(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-lg"
+                />
+                {pixFile && (
+                  <div className="mt-2">
+                    <img src={pixFile} alt="Comprovante PIX" className="max-h-32 rounded border" />
+                  </div>
+                )}
+              </div>
+            )}
+            {!confirmAlert && (
+              <div className="mb-4 text-yellow-700 bg-yellow-100 border-l-4 border-yellow-400 p-3 rounded">
+                <strong>Atenção:</strong> Após confirmar, não será possível
+                cancelar a doação. Tenha certeza antes de prosseguir.
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setModalOpen(false);
+                  setDonorName("");
+                  setDonorPhone("");
+                  setDonorObs("");
+                  setSelectedItem(null);
+                  setConfirmAlert(false);
+                }}
+                className="flex-1 px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-xl transition-all duration-300"
+              >
+                Cancelar
+              </button>
+              {!confirmAlert ? (
+                <button
+                  onClick={() => setConfirmAlert(true)}
+                  disabled={
+                    !(donorName.trim().length >= 3 && donorPhone.trim() && donationType && (donationType === "PIX" ? pixFile : true))
+                  }
+                  className={`flex-1 px-6 py-3 font-semibold rounded-xl transition-all duration-300 ${
+                    donorName.trim().length >= 3 && donorPhone.trim() && donationType && (donationType === "PIX" ? pixFile : true)
+                      ? "bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] hover:from-[#3b82f6] hover:to-[#1e3a8a] text-white shadow-lg hover:shadow-xl"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  Confirmar
+                </button>
+              ) : (
+                <button
+                  onClick={confirmDonation}
+                  className="flex-1 px-6 py-3 font-semibold rounded-xl bg-green-600 text-white shadow-lg hover:bg-green-700 transition-all duration-300"
+                >
+                  Sim, estou ciente e quero doar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
