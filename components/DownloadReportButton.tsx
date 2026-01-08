@@ -1,7 +1,6 @@
+
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-// @ts-ignore
-type CellHookData = Parameters<Parameters<typeof autoTable>[1]["didDrawCell"]>[0];
+import autoTable, { CellHookData } from "jspdf-autotable";
 import { useState } from "react";
 
 import { DonationItem } from "../app/data";
@@ -10,7 +9,9 @@ interface DownloadReportButtonProps {
   items: DonationItem[];
 }
 
-export default function DownloadReportButton({ items }: DownloadReportButtonProps) {
+export default function DownloadReportButton({
+  items,
+}: DownloadReportButtonProps) {
   const [loading, setLoading] = useState(false);
 
   const handleDownload = () => {
@@ -39,19 +40,23 @@ export default function DownloadReportButton({ items }: DownloadReportButtonProp
             "Observação",
           ],
         ],
-        body: (items
+        body: items
           .filter((item) => item.donated)
-          .map((item): [string, string, string, string, string, string, string] => [
-            item.name || "",
-            item.donorName || "",
-            item.donorPhone || "",
-            item.donationDate || "",
-            item.donationType || "",
-            item.donationType === "PIX" && item.pixFile
-              ? "Ver comprovante"
-              : "",
-            item.donorObs || "",
-          ])),
+          .map(
+            (
+              item
+            ): [string, string, string, string, string, string, string] => [
+              item.name || "",
+              item.donorName || "",
+              item.donorPhone || "",
+              item.donationDate || "",
+              item.donationType || "",
+              item.donationType === "PIX" && item.pixFile
+                ? "Ver comprovante"
+                : "",
+              item.donorObs || "",
+            ]
+          ),
         theme: "grid",
         styles: { fontSize: 10, cellPadding: 3 },
         headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255] },
