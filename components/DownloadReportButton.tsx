@@ -121,7 +121,7 @@ export default function DownloadReportButton({ items }: DownloadReportButtonProp
     <button
       onClick={handleDownload}
       disabled={loading || !items.some((item) => item.donated)}
-      className="px-6 py-3 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] text-white font-semibold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
     >
       {loading ? "Gerando PDF..." : "Baixar Relatório PDF"}
     </button>

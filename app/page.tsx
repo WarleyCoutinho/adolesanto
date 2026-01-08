@@ -115,12 +115,12 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 pt-8 flex justify-end">
+    <div className="min-h-screen w-full">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 pt-6 sm:pt-8 flex justify-end w-full">
         <DownloadReportButton items={items} />
       </div>
       {/* Decorative Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-20 left-10 w-64 h-64 bg-blue-200 rounded-full opacity-20 blur-3xl animate-float"></div>
         <div
           className="absolute bottom-40 right-20 w-80 h-80 bg-yellow-200 rounded-full opacity-20 blur-3xl animate-float"
@@ -133,38 +133,38 @@ export default function Home() {
       </div>
 
       {/* Header */}
-      <header className="relative pt-12 pb-8 px-4">
-        <div className="max-w-6xl mx-auto text-center">
+      <header className="relative pt-8 sm:pt-12 pb-6 sm:pb-8 px-2 sm:px-4">
+        <div className="max-w-6xl mx-auto text-center w-full">
           <div className="inline-block mb-6 animate-fade-in">
             <div className="halo-effect">
-              <h1 className="text-5xl md:text-7xl font-bold text-[#1e3a8a] mb-2 wing-decoration">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold text-[#1e3a8a] mb-2 wing-decoration">
                 Adolesanto
               </h1>
             </div>
-            <p className="text-2xl md:text-3xl text-[#d4af37] font-semibold italic">
+            <p className="text-lg sm:text-2xl md:text-3xl text-[#d4af37] font-semibold italic">
               Santíssima Trindade
             </p>
           </div>
 
-          <p className="text-xl md:text-2xl text-gray-700 mb-3 font-medium">
+          <p className="text-base sm:text-xl md:text-2xl text-gray-700 mb-3 font-medium">
             06, 07 e 08 de fevereiro
           </p>
 
-          <div className="inline-block bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] text-white px-8 py-3 rounded-full shadow-lg">
-            <p className="text-lg font-semibold">Organização das Refeições</p>
+          <div className="inline-block bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] text-white px-4 sm:px-8 py-2 sm:py-3 rounded-full shadow-lg">
+            <p className="text-base sm:text-lg font-semibold">Organização das Refeições</p>
           </div>
         </div>
       </header>
 
       {/* Progress Section */}
-      <section className="max-w-6xl mx-auto px-4 py-8 animate-slide-up">
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border-4 border-[#d4af37]/30">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-[#1e3a8a] mb-6">
+      <section className="max-w-6xl mx-auto px-2 sm:px-4 py-6 sm:py-8 animate-slide-up">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border-2 sm:border-4 border-[#d4af37]/30">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center text-[#1e3a8a] mb-4 sm:mb-6">
             Progresso das Doações
           </h2>
 
           <div className="mb-6">
-            <div className="flex justify-between items-center mb-3">
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-3 gap-2">
               <span className="text-lg font-semibold text-gray-700">
                 {donatedItems} de {totalItems} itens doados
               </span>
@@ -173,7 +173,7 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="relative h-12 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+            <div className="relative h-8 sm:h-12 bg-gray-200 rounded-full overflow-hidden shadow-inner">
               <div
                 className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#1e3a8a] via-[#3b82f6] to-[#d4af37] transition-all duration-1000 ease-out rounded-full"
                 style={{ width: `${progressPercentage}%` }}
@@ -194,8 +194,8 @@ export default function Home() {
       </section>
 
       {/* Day Filter */}
-      <section className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex flex-wrap gap-3 justify-center">
+      <section className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
+        <div className="flex flex-wrap gap-2 sm:gap-3 justify-center">
           {days.map((day) => (
             <button
               key={day}
@@ -213,7 +213,7 @@ export default function Home() {
       </section>
 
       {/* Donation Items */}
-      <section className="max-w-6xl mx-auto px-4 py-8 pb-16">
+      <section className="max-w-6xl mx-auto px-2 sm:px-4 py-6 sm:py-8 pb-10 sm:pb-16">
         {Object.entries(groupedItems).map(([groupKey, groupItems]) => {
           const categoryDonated = groupItems.filter(
             (item) => item.donated
@@ -226,34 +226,34 @@ export default function Home() {
           return (
             <div key={groupKey} className="mb-12 animate-slide-up">
               <div className="bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] rounded-t-3xl p-6 shadow-xl">
-                <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                <h3 className="text-lg sm:text-2xl md:text-3xl font-bold text-white mb-2">
                   {groupKey}
                 </h3>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 h-4 bg-white/30 rounded-full overflow-hidden">
+                <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                  <div className="flex-1 h-2 sm:h-4 bg-white/30 rounded-full overflow-hidden w-full">
                     <div
                       className="h-full bg-[#d4af37] transition-all duration-500"
                       style={{ width: `${categoryProgress}%` }}
                     ></div>
                   </div>
-                  <span className="text-white font-bold text-lg">
+                  <span className="text-white font-bold text-sm sm:text-lg">
                     {categoryProgress}%
                   </span>
                 </div>
               </div>
 
-              <div className="bg-white/90 backdrop-blur-sm rounded-b-3xl shadow-xl p-6 border-4 border-t-0 border-[#1e3a8a]/20">
-                <div className="grid gap-4">
+              <div className="bg-white/90 backdrop-blur-sm rounded-b-2xl sm:rounded-b-3xl shadow-xl p-3 sm:p-6 border-2 sm:border-4 border-t-0 border-[#1e3a8a]/20">
+                <div className="grid gap-2 sm:gap-4">
                   {groupItems.map((item) => (
                     <div
                       key={item.id}
-                      className={`p-5 rounded-2xl border-2 transition-all duration-300 ${
+                      className={`p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-300 ${
                         item.donated
                           ? "bg-gradient-to-r from-green-50 to-green-100 border-green-400 shadow-md"
                           : "bg-white border-gray-200 hover:border-[#d4af37] hover:shadow-lg"
                       }`}
                     >
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
                         <div className="flex-1">
                           <p
                             className={`text-lg font-semibold ${
@@ -273,7 +273,7 @@ export default function Home() {
                         {!item.donated && (
                           <button
                             onClick={() => handleDonate(item)}
-                            className="px-6 py-2 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] hover:from-[#3b82f6] hover:to-[#1e3a8a] text-white font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+                            className="px-4 sm:px-6 py-2 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] hover:from-[#3b82f6] hover:to-[#1e3a8a] text-white font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
                           >
                             Doar
                           </button>
@@ -289,37 +289,37 @@ export default function Home() {
       </section>
 
       {/* Contact Info */}
-      <footer className="max-w-6xl mx-auto px-4 py-12 text-center">
-        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border-4 border-[#d4af37]/30">
-          <h3 className="text-2xl font-bold text-[#1e3a8a] mb-6">
+      <footer className="max-w-6xl mx-auto px-2 sm:px-4 py-8 sm:py-12 text-center">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border-2 sm:border-4 border-[#d4af37]/30">
+          <h3 className="text-lg sm:text-2xl font-bold text-[#1e3a8a] mb-4 sm:mb-6">
             Colabore com este momento de comunhão
           </h3>
 
-          <div className="space-y-3 mb-6">
-            <p className="text-lg text-gray-700">
+          <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+            <p className="text-base sm:text-lg text-gray-700">
               <strong>📞 Contato (WhatsApp):</strong>
             </p>
-            <p className="text-xl font-semibold text-[#3b82f6]">
+            <p className="text-lg sm:text-xl font-semibold text-[#3b82f6]">
               (62) 99248-6492 | (62) 99248-6496
             </p>
           </div>
 
-          <div className="space-y-3 mb-8">
-            <p className="text-lg text-gray-700">
+          <div className="space-y-2 sm:space-y-3 mb-6 sm:mb-8">
+            <p className="text-base sm:text-lg text-gray-700">
               <strong>💰 PIX (Doações em dinheiro):</strong>
             </p>
-            <p className="text-xl font-semibold text-[#3b82f6]">
+            <p className="text-lg sm:text-xl font-semibold text-[#3b82f6]">
               (62) 99468-9297
             </p>
             <p className="text-gray-700">Banco: Neon Pagamentos S.A.</p>
             <p className="text-gray-700">Warley Coutinho Pereira dos Santos</p>
           </div>
 
-          <div className="border-t-2 border-[#d4af37]/30 pt-6">
-            <p className="text-lg italic text-gray-600">
+          <div className="border-t border-[#d4af37]/30 pt-4 sm:pt-6">
+            <p className="text-sm sm:text-lg italic text-gray-600">
               "Cada um contribua conforme o impulso do seu coração."
             </p>
-            <p className="text-sm text-gray-500 mt-2">(2 Coríntios 9,7)</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">(2 Coríntios 9,7)</p>
           </div>
         </div>
       </footer>
