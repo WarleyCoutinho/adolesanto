@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
@@ -8,22 +8,31 @@ datasource db {
 }
 
 model DonationItem {
-  id        String   @id @default(cuid())
-  itemId    String   @unique // ID original do item (ex: 'sex-milho-1')
-  name      String // Nome do item
-  category  String // Categoria (ex: 'Caldo de milho')
-  day       String // Dia do evento
-  meal      String // Refeição
-  donated   Boolean  @default(false)
+  id       String  @id @default(cuid())
+  itemId   String  @unique // ID original do item (ex: 'sex-milho-1')
+  name     String // Nome do item
+  category String // Categoria (ex: 'Caldo de milho')
+  day      String // Dia do evento
+  meal     String // Refeição
+  donated  Boolean @default(false)
+
+  // ========== NOVOS CAMPOS PARA DOAÇÕES PARCIAIS ==========
+  requiresQuantity Boolean @default(false) // true se for medido em kg/litros
+  totalQuantity    Float? // quantidade total necessária (ex: 5 kg)
+  donatedQuantity  Float   @default(0) // quantidade já doada acumulada
+  unit             String? // "kg", "litros", etc.
+  // ========================================================
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relacionamento com doação (se houver)
-  donation Donation?
+  // Relacionamento com doações (agora pode ter várias doações parciais)
+  donations Donation[]
 
   @@index([day])
   @@index([category])
   @@index([donated])
+  @@index([requiresQuantity])
 }
 
 model Donation {
@@ -33,12 +42,18 @@ model Donation {
   donorObs     String? // Observação opcional
   donationType String // 'Item' ou 'PIX'
   donationDate DateTime @default(now())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 
-  // Relacionamento com item doado
+  // ========== NOVOS CAMPOS PARA DOAÇÕES PARCIAIS ==========
+  isPartialDonation Boolean @default(false) // true se for doação parcial
+  partialQuantity   Float? // quantidade doada (se parcial)
+  // ========================================================
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamento com item doado (MODIFICADO: removido @unique para permitir múltiplas doações)
   donationItem   DonationItem @relation(fields: [donationItemId], references: [id], onDelete: Cascade)
-  donationItemId String       @unique
+  donationItemId String
 
   // Comprovante PIX (opcional)
   pixReceipt PixReceipt?
@@ -46,6 +61,7 @@ model Donation {
   @@index([donorPhone])
   @@index([donationType])
   @@index([donationDate])
+  @@index([isPartialDonation])
 }
 
 model PixReceipt {

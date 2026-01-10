@@ -17,12 +17,13 @@ export default function Home() {
   const [confirmAlert, setConfirmAlert] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Carrega itens da API ao montar o componente
+  const [isPartialDonation, setIsPartialDonation] = useState(false);
+  const [partialQuantity, setPartialQuantity] = useState("");
+
   useEffect(() => {
     loadItems();
   }, []);
 
-  // Função para carregar itens da API
   const loadItems = async () => {
     try {
       setLoading(true);
@@ -42,6 +43,25 @@ export default function Home() {
     }
   };
 
+  const isMeasurableItem = (
+    itemName: string
+  ): { isMeasurable: boolean; unit: string; totalQuantity: number } => {
+    const kgMatch = itemName.match(/(\d+(?:,\d+)?)\s*kg/i);
+    const literMatch = itemName.match(/(\d+(?:,\d+)?)\s*(?:litros?|lt?)/i);
+
+    if (kgMatch) {
+      const quantity = parseFloat(kgMatch[1].replace(",", "."));
+      return { isMeasurable: true, unit: "kg", totalQuantity: quantity };
+    }
+
+    if (literMatch) {
+      const quantity = parseFloat(literMatch[1].replace(",", "."));
+      return { isMeasurable: true, unit: "litro(s)", totalQuantity: quantity };
+    }
+
+    return { isMeasurable: false, unit: "", totalQuantity: 0 };
+  };
+
   const handleDonate = (item: DonationItem) => {
     setSelectedItem(item);
     setDonorName("");
@@ -50,6 +70,8 @@ export default function Home() {
     setDonationType("");
     setPixFile("");
     setConfirmAlert(false);
+    setIsPartialDonation(false);
+    setPartialQuantity("");
     setModalOpen(true);
   };
 
@@ -68,6 +90,21 @@ export default function Home() {
       return;
     }
 
+    if (donationType === "Item" && isPartialDonation) {
+      if (!partialQuantity || parseFloat(partialQuantity) <= 0) {
+        alert("Digite uma quantidade válida");
+        return;
+      }
+
+      const { totalQuantity } = isMeasurableItem(selectedItem.name);
+      const donatedQty = parseFloat(partialQuantity);
+
+      if (donatedQty > totalQuantity) {
+        alert(`A quantidade não pode ser maior que ${totalQuantity}`);
+        return;
+      }
+    }
+
     try {
       setLoading(true);
 
@@ -81,6 +118,12 @@ export default function Home() {
           donorObs,
           donationType,
           pixFile: donationType === "PIX" ? pixFile : null,
+          isPartialDonation:
+            donationType === "Item" ? isPartialDonation : false,
+          partialQuantity:
+            donationType === "Item" && isPartialDonation
+              ? parseFloat(partialQuantity)
+              : null,
         }),
       });
 
@@ -90,13 +133,11 @@ export default function Home() {
         throw new Error(data.error || "Erro ao processar");
       }
 
-      // Recarrega os itens da API
       await loadItems();
 
       setModalOpen(false);
       alert("Doação confirmada! 🙏");
 
-      // Limpar campos
       setDonorName("");
       setDonorPhone("");
       setDonorObs("");
@@ -104,6 +145,8 @@ export default function Home() {
       setPixFile("");
       setSelectedItem(null);
       setConfirmAlert(false);
+      setIsPartialDonation(false);
+      setPartialQuantity("");
     } catch (error) {
       console.error("Erro ao confirmar doação:", error);
       alert(
@@ -171,7 +214,6 @@ export default function Home() {
         <DownloadReportButton items={items} />
       </div>
 
-      {/* Decorative Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-20 left-10 w-64 h-64 bg-blue-200 rounded-full opacity-20 blur-3xl animate-float"></div>
         <div
@@ -184,7 +226,6 @@ export default function Home() {
         ></div>
       </div>
 
-      {/* Header */}
       <header className="relative pt-8 sm:pt-12 pb-6 sm:pb-8 px-2 sm:px-4">
         <div className="max-w-6xl mx-auto text-center w-full">
           <div className="inline-block mb-6 animate-fade-in">
@@ -210,7 +251,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Progress Section */}
       <section className="max-w-6xl mx-auto px-2 sm:px-4 py-6 sm:py-8 animate-slide-up">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border-2 sm:border-4 border-[#d4af37]/30">
           <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center text-[#1e3a8a] mb-4 sm:mb-6">
@@ -247,7 +287,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Day Filter */}
       <section className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
         <div className="flex flex-wrap gap-2 sm:gap-3 justify-center">
           {days.map((day) => (
@@ -266,7 +305,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Donation Items */}
       <section className="max-w-6xl mx-auto px-2 sm:px-4 py-6 sm:py-8 pb-10 sm:pb-16">
         {Object.entries(groupedItems).map(([groupKey, groupItems]) => {
           const categoryDonated = groupItems.filter(
@@ -300,7 +338,11 @@ export default function Home() {
               <div className="bg-white/90 backdrop-blur-sm rounded-b-2xl sm:rounded-b-3xl shadow-xl p-3 sm:p-6 border-2 sm:border-4 border-t-0 border-[#1e3a8a]/20">
                 <div className="grid gap-2 sm:gap-4">
                   {groupItems.map((item) => {
-                    const itemDonorName = getDonorName(item);
+                    const hasPartialDonations =
+                      item.requiresQuantity &&
+                      item.donations &&
+                      item.donations.length > 0;
+                    const remainingQty = item.remainingQuantity || 0;
 
                     return (
                       <div
@@ -308,23 +350,97 @@ export default function Home() {
                         className={`p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-300 ${
                           item.donated
                             ? "bg-gradient-to-r from-green-50 to-green-100 border-green-400 shadow-md"
+                            : hasPartialDonations
+                            ? "bg-gradient-to-r from-blue-50 to-blue-100 border-blue-400 shadow-md"
                             : "bg-white border-gray-200 hover:border-[#d4af37] hover:shadow-lg"
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
-                          <div className="flex-1">
+                          <div className="flex-1 w-full">
                             <p
                               className={`text-lg font-semibold ${
                                 item.donated
                                   ? "text-green-800"
+                                  : hasPartialDonations
+                                  ? "text-blue-800"
                                   : "text-gray-800"
                               }`}
                             >
                               {item.name}
                             </p>
-                            {item.donated && itemDonorName && (
+
+                            {/* Mostrar doações parciais */}
+                            {hasPartialDonations && (
+                              <div className="mt-2 space-y-1">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span
+                                    className={`font-semibold ${
+                                      item.donated
+                                        ? "text-green-700"
+                                        : "text-blue-700"
+                                    }`}
+                                  >
+                                    Doado: {item.donatedQuantity.toFixed(1)}{" "}
+                                    {item.unit} de {item.totalQuantity}{" "}
+                                    {item.unit}
+                                  </span>
+                                  {!item.donated && (
+                                    <span className="text-orange-600 font-medium">
+                                      (Falta: {remainingQty.toFixed(1)}{" "}
+                                      {item.unit})
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Barra de progresso para doações parciais */}
+                                {item.totalQuantity &&
+                                  item.totalQuantity > 0 && (
+                                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                      <div
+                                        className={`h-2 rounded-full transition-all ${
+                                          item.donated
+                                            ? "bg-green-500"
+                                            : "bg-blue-500"
+                                        }`}
+                                        style={{
+                                          width: `${Math.min(
+                                            (item.donatedQuantity /
+                                              item.totalQuantity) *
+                                              100,
+                                            100
+                                          )}%`,
+                                        }}
+                                      ></div>
+                                    </div>
+                                  )}
+
+                                {/* Lista de doadores */}
+                                <div className="mt-2 space-y-1">
+                                  {item.donations?.map(
+                                    (donation: any, idx: number) => (
+                                      <p
+                                        key={idx}
+                                        className="text-sm text-gray-700"
+                                      >
+                                        ✓ {donation.donorName}
+                                        {donation.partialQuantity && (
+                                          <span className="font-medium text-blue-600">
+                                            {" "}
+                                            ({donation.partialQuantity}{" "}
+                                            {item.unit})
+                                          </span>
+                                        )}
+                                      </p>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Doação completa sem quantidade */}
+                            {item.donated && !hasPartialDonations && (
                               <p className="text-sm text-green-600 mt-1 font-medium">
-                                ✓ Doado por: {itemDonorName}
+                                ✓ Doado por: {getDonorName(item)}
                               </p>
                             )}
                           </div>
@@ -332,9 +448,9 @@ export default function Home() {
                           {!item.donated && (
                             <button
                               onClick={() => handleDonate(item)}
-                              className="px-4 sm:px-6 py-2 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] hover:from-[#3b82f6] hover:to-[#1e3a8a] text-white font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+                              className="px-4 sm:px-6 py-2 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] hover:from-[#3b82f6] hover:to-[#1e3a8a] text-white font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 whitespace-nowrap"
                             >
-                              Doar
+                              {hasPartialDonations ? "Doar Restante" : "Doar"}
                             </button>
                           )}
                         </div>
@@ -348,7 +464,6 @@ export default function Home() {
         })}
       </section>
 
-      {/* Contact Info */}
       <footer className="max-w-6xl mx-auto px-2 sm:px-4 py-8 sm:py-12 text-center">
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border-2 sm:border-4 border-[#d4af37]/30">
           <h3 className="text-lg sm:text-2xl font-bold text-[#1e3a8a] mb-4 sm:mb-6">
@@ -386,7 +501,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Donation Modal */}
       {modalOpen && selectedItem && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-slide-up border-4 border-[#d4af37] max-h-[90vh] overflow-y-auto">
@@ -396,6 +510,22 @@ export default function Home() {
             <p className="text-gray-700 mb-6 text-lg">
               <strong>Item:</strong> {selectedItem.name}
             </p>
+
+            {/* Mostrar quanto já foi doado */}
+            {selectedItem.requiresQuantity &&
+              selectedItem.donatedQuantity > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+                  <p className="text-sm text-blue-800">
+                    <strong>Já doado:</strong> {selectedItem.donatedQuantity}{" "}
+                    {selectedItem.unit}
+                    <br />
+                    <strong>Restante:</strong>{" "}
+                    {selectedItem.remainingQuantity?.toFixed(1)}{" "}
+                    {selectedItem.unit}
+                  </p>
+                </div>
+              )}
+
             <div className="mb-4">
               <label className="block text-gray-700 font-semibold mb-2 text-lg">
                 Seu nome <span className="text-red-500">*</span>
@@ -409,6 +539,7 @@ export default function Home() {
                 autoFocus
               />
             </div>
+
             <div className="mb-4">
               <label className="block text-gray-700 font-semibold mb-2 text-lg">
                 Telefone <span className="text-red-500">*</span>
@@ -421,6 +552,7 @@ export default function Home() {
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg"
               />
             </div>
+
             <div className="mb-4">
               <label className="block text-gray-700 font-semibold mb-2 text-lg">
                 Tipo de doação <span className="text-red-500">*</span>
@@ -457,6 +589,73 @@ export default function Home() {
                 </label>
               </div>
             </div>
+
+            {donationType === "Item" &&
+              (() => {
+                const { isMeasurable, unit, totalQuantity } = isMeasurableItem(
+                  selectedItem.name
+                );
+
+                if (!isMeasurable) return null;
+
+                const maxQuantity =
+                  selectedItem.remainingQuantity || totalQuantity;
+
+                return (
+                  <div className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                    <div className="mb-3">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isPartialDonation}
+                          onChange={(e) => {
+                            setIsPartialDonation(e.target.checked);
+                            if (!e.target.checked) setPartialQuantity("");
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-base font-semibold text-blue-900">
+                          💡 Doar apenas uma parte deste item
+                        </span>
+                      </label>
+                      <p className="text-sm text-blue-700 mt-1 ml-6">
+                        Doe o quanto puder!
+                      </p>
+                    </div>
+
+                    {isPartialDonation && (
+                      <div className="mt-3">
+                        <label className="block text-gray-700 font-semibold mb-2">
+                          Quantidade a doar{" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0.1"
+                            max={maxQuantity}
+                            value={partialQuantity}
+                            onChange={(e) => setPartialQuantity(e.target.value)}
+                            placeholder={`Máx: ${maxQuantity.toFixed(1)}`}
+                            className="flex-1 px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg"
+                          />
+                          <span className="text-lg font-semibold text-gray-700 min-w-[60px]">
+                            {unit}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-2">
+                          Ainda falta:{" "}
+                          <strong>
+                            {maxQuantity.toFixed(1)} {unit}
+                          </strong>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
             <div className="mb-4">
               <label className="block text-gray-700 font-semibold mb-2 text-lg">
                 Observação (opcional)
@@ -469,6 +668,7 @@ export default function Home() {
                 rows={3}
               />
             </div>
+
             {donationType === "PIX" && (
               <div className="mb-4">
                 <label className="block text-gray-700 font-semibold mb-2 text-lg">
@@ -494,12 +694,14 @@ export default function Home() {
                 </p>
               </div>
             )}
+
             {!confirmAlert && (
               <div className="mb-4 text-yellow-700 bg-yellow-100 border-l-4 border-yellow-400 p-3 rounded">
                 <strong>Atenção:</strong> Após confirmar, não será possível
                 cancelar a doação. Tenha certeza antes de prosseguir.
               </div>
             )}
+
             <div className="flex gap-3">
               <button
                 onClick={() => {
@@ -511,6 +713,8 @@ export default function Home() {
                   setPixFile("");
                   setSelectedItem(null);
                   setConfirmAlert(false);
+                  setIsPartialDonation(false);
+                  setPartialQuantity("");
                 }}
                 className="flex-1 px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-xl transition-all duration-300"
                 disabled={loading}
@@ -526,13 +730,20 @@ export default function Home() {
                     donorName.trim().length < 3 ||
                     !donorPhone.trim() ||
                     !donationType ||
-                    (donationType === "PIX" && !pixFile)
+                    (donationType === "PIX" && !pixFile) ||
+                    (donationType === "Item" &&
+                      isPartialDonation &&
+                      (!partialQuantity || parseFloat(partialQuantity) <= 0))
                   }
                   className={`flex-1 px-6 py-3 font-semibold rounded-xl transition-all duration-300 ${
                     donorName.trim().length >= 3 &&
                     donorPhone.trim() &&
                     donationType &&
                     (donationType === "PIX" ? pixFile : true) &&
+                    (!isPartialDonation ||
+                      (isPartialDonation &&
+                        partialQuantity &&
+                        parseFloat(partialQuantity) > 0)) &&
                     !loading
                       ? "bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] hover:from-[#3b82f6] hover:to-[#1e3a8a] text-white shadow-lg hover:shadow-xl"
                       : "bg-gray-200 text-gray-400 cursor-not-allowed"

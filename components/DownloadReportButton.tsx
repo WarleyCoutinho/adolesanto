@@ -5,7 +5,6 @@ import {
   getDonationDate,
   getDonationType,
   getDonorName,
-  getDonorObs,
   getDonorPhone,
 } from "@/lib/types";
 
@@ -17,45 +16,40 @@ export default function DownloadReportButton({
   items,
 }: DownloadReportButtonProps) {
   const generatePDF = async () => {
-    // Importacao dinamica do jsPDF e autoTable
     const { jsPDF } = await import("jspdf");
     const autoTable = (await import("jspdf-autotable")).default;
 
     const doc = new jsPDF();
 
-    // Cores do tema
-    const primaryColor: [number, number, number] = [30, 58, 138]; // #1e3a8a
-    const secondaryColor: [number, number, number] = [212, 175, 55]; // #d4af37
+    const primaryColor: [number, number, number] = [30, 58, 138];
+    const secondaryColor: [number, number, number] = [212, 175, 55];
     const lightGray: [number, number, number] = [243, 244, 246];
 
-    // Filtrar apenas itens doados
-    const donatedItems = items.filter((item) => item.donated);
+    const donatedItems = items.filter(
+      (item) => item.donated || (item.donations?.length ?? 0) > 0
+    );
 
     if (donatedItems.length === 0) {
-      alert("Ainda nao ha doacoes para gerar relatorio.");
+      alert("Ainda não há doações para gerar relatório.");
       return;
     }
 
-    // ===== CABECALHO =====
     const pageWidth = doc.internal.pageSize.width;
 
-    // Fundo do cabecalho
+    // CABEÇALHO
     doc.setFillColor(...primaryColor);
     doc.rect(0, 0, pageWidth, 50, "F");
 
-    // Titulo principal
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
     doc.text("ADOLESANTO", pageWidth / 2, 20, { align: "center" });
 
-    // Subtitulo
     doc.setFontSize(14);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(...secondaryColor);
-    doc.text("Santissima Trindade", pageWidth / 2, 28, { align: "center" });
+    doc.text("Santíssima Trindade", pageWidth / 2, 28, { align: "center" });
 
-    // Data do evento
     doc.setFontSize(11);
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "normal");
@@ -64,34 +58,38 @@ export default function DownloadReportButton({
     });
 
     doc.setFontSize(10);
-    doc.text("Relatorio de Doacoes", pageWidth / 2, 43, { align: "center" });
+    doc.text("Relatório de Doações", pageWidth / 2, 43, { align: "center" });
 
-    // ===== INFO DO RELATORIO =====
     let yPosition = 60;
 
     doc.setTextColor(100, 100, 100);
     doc.setFontSize(9);
     doc.text(
-      `Data de geracao: ${new Date().toLocaleString("pt-BR")}`,
+      `Data de geração: ${new Date().toLocaleString("pt-BR")}`,
       14,
       yPosition
     );
 
     yPosition += 10;
 
-    // ===== ESTATISTICAS =====
+    // ESTATÍSTICAS
     const totalItems = items.length;
-    const donatedCount = donatedItems.length;
-    const progressPercentage = Math.round((donatedCount / totalItems) * 100);
+    const fullyDonatedCount = items.filter((item) => item.donated).length;
+    const partiallyDonatedCount = items.filter(
+      (item) => !item.donated && (item.donations?.length ?? 0) > 0
+    ).length;
+    const totalDonatedCount = fullyDonatedCount + partiallyDonatedCount;
+    const progressPercentage = Math.round(
+      (fullyDonatedCount / totalItems) * 100
+    );
 
-    // Box de estatisticas
     doc.setFillColor(...lightGray);
-    doc.roundedRect(14, yPosition, pageWidth - 28, 30, 3, 3, "F");
+    doc.roundedRect(14, yPosition, pageWidth - 28, 35, 3, 3, "F");
 
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...primaryColor);
-    doc.text("Estatisticas Gerais", 20, yPosition + 8);
+    doc.text("Estatísticas Gerais", 20, yPosition + 8);
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
@@ -99,15 +97,15 @@ export default function DownloadReportButton({
 
     const statsY = yPosition + 16;
     doc.text(`Total de itens: ${totalItems}`, 20, statsY);
-    doc.text(`Itens doados: ${donatedCount}`, 80, statsY);
-    doc.text(`Pendentes: ${totalItems - donatedCount}`, 140, statsY);
+    doc.text(`Completos: ${fullyDonatedCount}`, 80, statsY);
+    doc.text(`Parciais: ${partiallyDonatedCount}`, 130, statsY);
 
-    // Barra de progresso
-    const progressBarY = yPosition + 24;
+    doc.text(`Pendentes: ${totalItems - totalDonatedCount}`, 20, statsY + 6);
+
+    const progressBarY = yPosition + 28;
     const progressBarWidth = pageWidth - 40;
     const progressBarHeight = 4;
 
-    // Fundo da barra
     doc.setFillColor(220, 220, 220);
     doc.roundedRect(
       20,
@@ -119,7 +117,6 @@ export default function DownloadReportButton({
       "F"
     );
 
-    // Progresso
     doc.setFillColor(...secondaryColor);
     const progressWidth = (progressBarWidth * progressPercentage) / 100;
     doc.roundedRect(
@@ -132,7 +129,6 @@ export default function DownloadReportButton({
       "F"
     );
 
-    // Percentual
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...secondaryColor);
@@ -140,68 +136,122 @@ export default function DownloadReportButton({
       align: "right",
     });
 
-    yPosition += 40;
+    yPosition += 45;
 
-    // ===== TABELA DE DOACOES =====
+    // TABELA DE DOAÇÕES DETALHADA
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...primaryColor);
-    doc.text("Detalhes das Doacoes", 14, yPosition);
+    doc.text("Detalhes das Doações", 14, yPosition);
 
     yPosition += 8;
 
-    // Preparar dados para a tabela
-    const tableData = donatedItems.map((item, index) => {
-      const donorName = getDonorName(item);
-      const donorPhone = getDonorPhone(item);
-      const donorObs = getDonorObs(item);
-      const donationType = getDonationType(item);
-      const donationDate = getDonationDate(item);
+    // Preparar dados expandidos para a tabela
+    const tableData: any[] = [];
+    let itemIndex = 1;
 
-      return [
-        index + 1,
-        item.name,
-        donorName,
-        donorPhone,
-        donationType,
-        donationDate
-          ? new Date(donationDate).toLocaleString("pt-BR", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "-",
-        donorObs || "-",
-      ];
+    donatedItems.forEach((item) => {
+      if (item.donations && item.donations.length > 0) {
+        // Item com doações (parciais ou completas)
+        item.donations.forEach((donation: any, donationIdx: number) => {
+          const donationDate = donation.createdAt
+            ? new Date(donation.createdAt).toLocaleString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "-";
+
+          const quantityInfo =
+            donation.partialQuantity && item.unit
+              ? `${donation.partialQuantity} ${item.unit}`
+              : item.requiresQuantity && item.totalQuantity
+              ? `${item.totalQuantity} ${item.unit}`
+              : "Completo";
+
+          const statusInfo = item.requiresQuantity
+            ? `${item.donatedQuantity}/${item.totalQuantity} ${item.unit}`
+            : "Completo";
+
+          tableData.push([
+            donationIdx === 0 ? itemIndex : "",
+            donationIdx === 0 ? item.name : "",
+            donation.donorName,
+            donation.donorPhone,
+            quantityInfo,
+            statusInfo,
+            donation.donationType === "PIX" ? "PIX" : "Item",
+            donationDate,
+          ]);
+        });
+        itemIndex++;
+      } else {
+        // Item doado sem múltiplas doações (compatibilidade)
+        const donorName = getDonorName(item);
+        const donorPhone = getDonorPhone(item);
+        const donationType = getDonationType(item);
+        const donationDate = getDonationDate(item);
+
+        tableData.push([
+          itemIndex,
+          item.name,
+          donorName,
+          donorPhone,
+          "Completo",
+          "Completo",
+          donationType,
+          donationDate
+            ? new Date(donationDate).toLocaleString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "-",
+        ]);
+        itemIndex++;
+      }
     });
 
-    // Configurar e adicionar tabela
     autoTable(doc, {
       startY: yPosition,
-      head: [["#", "Item", "Doador", "Telefone", "Tipo", "Data", "Obs"]],
+      head: [
+        [
+          "#",
+          "Item",
+          "Doador",
+          "Telefone",
+          "Qtd Doada",
+          "Status",
+          "Tipo",
+          "Data",
+        ],
+      ],
       body: tableData,
       theme: "grid",
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
         fontStyle: "bold",
-        fontSize: 9,
+        fontSize: 8,
         halign: "center",
       },
       bodyStyles: {
-        fontSize: 8,
-        cellPadding: 3,
+        fontSize: 7,
+        cellPadding: 2,
       },
       columnStyles: {
-        0: { cellWidth: 10, halign: "center" },
-        1: { cellWidth: 40 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 28 },
+        0: { cellWidth: 8, halign: "center" },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 24 },
         4: { cellWidth: 20, halign: "center" },
-        5: { cellWidth: 30, fontSize: 7 },
-        6: { cellWidth: 24, fontSize: 7 },
+        5: { cellWidth: 20, halign: "center" },
+        6: { cellWidth: 15, halign: "center" },
+        7: { cellWidth: 28, fontSize: 6 },
       },
       alternateRowStyles: {
         fillColor: [250, 250, 250],
@@ -209,33 +259,121 @@ export default function DownloadReportButton({
       margin: { left: 14, right: 14 },
     });
 
-    // Pegar posicao Y apos a tabela
     yPosition = (doc as any).lastAutoTable.finalY + 15;
 
-    // ===== LISTA DE DOADORES =====
-    // Agrupar doadores unicos
+    // RESUMO POR ITEM (para itens com doações parciais)
+    const itemsWithPartialDonations = items.filter(
+      (item) => item.requiresQuantity && (item.donations?.length ?? 0) > 1
+    );
+
+    if (itemsWithPartialDonations.length > 0) {
+      if (yPosition > doc.internal.pageSize.height - 80) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...primaryColor);
+      doc.text("Resumo de Itens com Múltiplas Doações", 14, yPosition);
+
+      yPosition += 8;
+
+      const partialItemsData = itemsWithPartialDonations.map((item, index) => {
+        const donorsList = (item.donations || [])
+          .map(
+            (d: any) =>
+              `${d.donorName} (${d.partialQuantity || 0} ${item.unit})`
+          )
+          .join("; ");
+
+        return [
+          index + 1,
+          item.name,
+          `${item.donatedQuantity}/${item.totalQuantity} ${item.unit}`,
+          item.donated ? "Completo" : "Parcial",
+          donorsList,
+        ];
+      });
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [["#", "Item", "Progresso", "Status", "Doadores"]],
+        body: partialItemsData,
+        theme: "grid",
+        headStyles: {
+          fillColor: secondaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 9,
+          halign: "center",
+        },
+        bodyStyles: {
+          fontSize: 8,
+          cellPadding: 3,
+        },
+        columnStyles: {
+          0: { cellWidth: 10, halign: "center" },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 25, halign: "center" },
+          3: { cellWidth: 20, halign: "center" },
+          4: { cellWidth: 87 },
+        },
+        alternateRowStyles: {
+          fillColor: [250, 250, 250],
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // LISTA DE DOADORES
     const uniqueDonors = new Map<
       string,
-      { name: string; phone: string; items: number }
+      { name: string; phone: string; items: number; quantities: string[] }
     >();
 
     donatedItems.forEach((item) => {
-      const donorName = getDonorName(item);
-      const donorPhone = getDonorPhone(item);
-
-      if (uniqueDonors.has(donorPhone)) {
-        const donor = uniqueDonors.get(donorPhone)!;
-        donor.items += 1;
-      } else {
-        uniqueDonors.set(donorPhone, {
-          name: donorName,
-          phone: donorPhone,
-          items: 1,
+      if (item.donations && item.donations.length > 0) {
+        item.donations.forEach((donation: any) => {
+          if (uniqueDonors.has(donation.donorPhone)) {
+            const donor = uniqueDonors.get(donation.donorPhone)!;
+            donor.items += 1;
+            if (donation.partialQuantity && item.unit) {
+              donor.quantities.push(`${donation.partialQuantity} ${item.unit}`);
+            }
+          } else {
+            const quantities: string[] = [];
+            if (donation.partialQuantity && item.unit) {
+              quantities.push(`${donation.partialQuantity} ${item.unit}`);
+            }
+            uniqueDonors.set(donation.donorPhone, {
+              name: donation.donorName,
+              phone: donation.donorPhone,
+              items: 1,
+              quantities,
+            });
+          }
         });
+      } else {
+        const donorName = getDonorName(item);
+        const donorPhone = getDonorPhone(item);
+
+        if (uniqueDonors.has(donorPhone)) {
+          const donor = uniqueDonors.get(donorPhone)!;
+          donor.items += 1;
+        } else {
+          uniqueDonors.set(donorPhone, {
+            name: donorName,
+            phone: donorPhone,
+            items: 1,
+            quantities: [],
+          });
+        }
       }
     });
 
-    // Verificar se precisa de nova pagina
     if (yPosition > doc.internal.pageSize.height - 80) {
       doc.addPage();
       yPosition = 20;
@@ -248,14 +386,13 @@ export default function DownloadReportButton({
 
     yPosition += 8;
 
-    // Dados dos doadores
     const donorsData = Array.from(uniqueDonors.values())
       .sort((a, b) => b.items - a.items)
       .map((donor, index) => [index + 1, donor.name, donor.phone, donor.items]);
 
     autoTable(doc, {
       startY: yPosition,
-      head: [["#", "Nome", "Telefone", "Itens Doados"]],
+      head: [["#", "Nome", "Telefone", "Doações"]],
       body: donorsData,
       theme: "grid",
       headStyles: {
@@ -281,10 +418,9 @@ export default function DownloadReportButton({
       margin: { left: 14, right: 14 },
     });
 
-    // ===== RODAPE =====
+    // RODAPÉ
     const finalY = (doc as any).lastAutoTable.finalY + 15;
 
-    // Verificar se precisa de nova pagina para o rodape
     if (finalY > doc.internal.pageSize.height - 60) {
       doc.addPage();
       yPosition = 20;
@@ -292,14 +428,13 @@ export default function DownloadReportButton({
       yPosition = finalY;
     }
 
-    // Box de informacoes de contato
     doc.setFillColor(...primaryColor);
     doc.roundedRect(14, yPosition, pageWidth - 28, 35, 3, 3, "F");
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text("Informacoes de Contato", 20, yPosition + 8);
+    doc.text("Informações de Contato", 20, yPosition + 8);
 
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
@@ -311,33 +446,31 @@ export default function DownloadReportButton({
     );
     doc.text("Titular: Warley Coutinho Pereira dos Santos", 20, yPosition + 28);
 
-    // Versiculo
     yPosition += 40;
     doc.setFontSize(8);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(100, 100, 100);
     doc.text(
-      '"Cada um contribua conforme o impulso do seu coracao." (2 Corintios 9,7)',
+      '"Cada um contribua conforme o impulso do seu coração." (2 Coríntios 9,7)',
       pageWidth / 2,
       yPosition,
       { align: "center" }
     );
 
-    // Adicionar numeros de pagina
+    // Números de página
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.text(
-        `Pagina ${i} de ${pageCount}`,
+        `Página ${i} de ${pageCount}`,
         pageWidth / 2,
         doc.internal.pageSize.height - 10,
         { align: "center" }
       );
     }
 
-    // Salvar PDF
     const fileName = `relatorio-doacoes-adolesanto-${
       new Date().toISOString().split("T")[0]
     }.pdf`;
@@ -361,8 +494,8 @@ export default function DownloadReportButton({
           clipRule="evenodd"
         />
       </svg>
-      <span className="hidden sm:inline">Baixar Relatorio PDF</span>
-      <span className="sm:hidden">Relatorio</span>
+      <span className="hidden sm:inline">Baixar Relatório PDF</span>
+      <span className="sm:hidden">Relatório</span>
     </button>
   );
 }
