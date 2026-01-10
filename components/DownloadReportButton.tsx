@@ -19,14 +19,14 @@ export default function DownloadReportButton({
   const generatePDF = async () => {
     // Importacao dinamica do jsPDF e autoTable
     const { jsPDF } = await import("jspdf");
-    await import("jspdf-autotable");
+    const autoTable = (await import("jspdf-autotable")).default;
 
-    const doc = new jsPDF() as any;
+    const doc = new jsPDF();
 
     // Cores do tema
-    const primaryColor = [30, 58, 138]; // #1e3a8a
-    const secondaryColor = [212, 175, 55]; // #d4af37
-    const lightGray = [243, 244, 246];
+    const primaryColor: [number, number, number] = [30, 58, 138]; // #1e3a8a
+    const secondaryColor: [number, number, number] = [212, 175, 55]; // #d4af37
+    const lightGray: [number, number, number] = [243, 244, 246];
 
     // Filtrar apenas itens doados
     const donatedItems = items.filter((item) => item.donated);
@@ -178,7 +178,7 @@ export default function DownloadReportButton({
     });
 
     // Configurar e adicionar tabela
-    doc.autoTable({
+    autoTable(doc, {
       startY: yPosition,
       head: [["#", "Item", "Doador", "Telefone", "Tipo", "Data", "Obs"]],
       body: tableData,
@@ -253,7 +253,7 @@ export default function DownloadReportButton({
       .sort((a, b) => b.items - a.items)
       .map((donor, index) => [index + 1, donor.name, donor.phone, donor.items]);
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: yPosition,
       head: [["#", "Nome", "Telefone", "Itens Doados"]],
       body: donorsData,
@@ -324,7 +324,7 @@ export default function DownloadReportButton({
     );
 
     // Adicionar numeros de pagina
-    const pageCount = doc.internal.getNumberOfPages();
+    const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);

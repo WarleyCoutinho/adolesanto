@@ -8,9 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "lint:fix": "eslint --fix",
-    "postinstall": "prisma generate",
-    "seed:manual": "ts-node --project tsconfig.seed.json prisma/seed.ts"
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
