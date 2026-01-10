@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// prisma.config.ts (ou schema.prisma)
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// model DonationItem {
+//   id           String   @id @default(cuid())
+//   name         String
+//   category     String
+//   day          String
+//   meal         String
+//   donated      Boolean  @default(false)
+//   donorName    String   @default("")
+//   donorPhone   String?
+//   donorObs     String?
+//   donationDate String?
+//   donationType String?
+//   pixFile      String?
+//   createdAt    DateTime @default(now())
+//   updatedAt    DateTime @updatedAt
+
+//   @@map("donation_items")
+// }
+
+model DonationItem {
+  id        String   @id @default(cuid())
+  itemId    String   @unique // ID original do item (ex: 'sex-milho-1')
+  name      String // Nome do item
+  category  String // Categoria (ex: 'Caldo de milho')
+  day       String // Dia do evento
+  meal      String // Refeição
+  donated   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamento com doação (se houver)
+  donation Donation?
+
+  @@index([day])
+  @@index([category])
+  @@index([donated])
+}
+
+model Donation {
+  id           String   @id @default(cuid())
+  donorName    String // Nome do doador
+  donorPhone   String // Telefone do doador
+  donorObs     String? // Observação opcional
+  donationType String // 'Item' ou 'PIX'
+  donationDate DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relacionamento com item doado
+  donationItem   DonationItem @relation(fields: [donationItemId], references: [id], onDelete: Cascade)
+  donationItemId String       @unique
+
+  // Comprovante PIX (opcional)
+  pixReceipt PixReceipt?
+
+  @@index([donorPhone])
+  @@index([donationType])
+  @@index([donationDate])
+}
+
+model PixReceipt {
+  id         String   @id @default(cuid())
+  fileName   String // Nome original do arquivo
+  fileUrl    String // URL ou caminho do arquivo salvo
+  fileSize   Int // Tamanho do arquivo em bytes
+  mimeType   String // Tipo MIME (ex: 'image/jpeg')
+  uploadedAt DateTime @default(now())
+
+  // Relacionamento com doação
+  donation   Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  donationId String   @unique
+
+  @@index([uploadedAt])
+}
+
+// Tabela opcional para logs de atividades
+model ActivityLog {
+  id          String   @id @default(cuid())
+  action      String // 'DONATION_CREATED', 'DONATION_CANCELLED', etc.
+  description String
+  metadata    Json? // Dados adicionais em JSON
+  createdAt   DateTime @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+}

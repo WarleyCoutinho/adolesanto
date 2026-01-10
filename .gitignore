@@ -58,3 +58,5 @@ out/
 !DEPLOY.md
 !GUIA-RAPIDO.md
 !next-env.d.ts
+
+/generated/prisma

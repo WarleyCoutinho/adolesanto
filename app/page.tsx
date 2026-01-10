@@ -1,54 +1,128 @@
 "use client";
 
+import DownloadReportButton from "@/components/DownloadReportButton";
+import { DonationItem, getDonorName } from "@/lib/types";
+
 import { useEffect, useState } from "react";
-import DownloadReportButton from "../components/DownloadReportButton";
-import { DonationItem, donationItems } from "./data";
 
 export default function Home() {
-    const [donationType, setDonationType] = useState<string>("");
   const [items, setItems] = useState<DonationItem[]>([]);
-  const [selectedDay, setSelectedDay] = useState<string>("Todos");
+  const [selectedDay, setSelectedDay] = useState("Todos");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<DonationItem | null>(null);
   const [donorName, setDonorName] = useState("");
   const [donorPhone, setDonorPhone] = useState("");
   const [donorObs, setDonorObs] = useState("");
+  const [donationType, setDonationType] = useState("");
+  const [pixFile, setPixFile] = useState("");
   const [confirmAlert, setConfirmAlert] = useState(false);
-
-  // Debounce para salvar localStorage
-  const [pixFile, setPixFile] = useState<string>("");
-  let saveTimeout: NodeJS.Timeout | null = null;
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("adolesanto-donations");
-        if (stored) {
-          setItems(JSON.parse(stored));
-        } else {
-          setItems(donationItems);
-        }
-      } catch (e) {
-        setItems(donationItems);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadItems();
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && items.length > 0) {
-      if (saveTimeout) clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(() => {
-        try {
-          localStorage.setItem("adolesanto-donations", JSON.stringify(items));
-          setPixFile("");
-        } catch (e) {
-          // Falha ao salvar, pode logar ou ignorar
-        }
-      }, 300);
+  const loadItems = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/donations");
+      const data = await response.json();
+      setItems(data.items);
+    } catch (error) {
+      console.error("Erro ao carregar:", error);
+      alert("Erro ao carregar itens");
+    } finally {
+      setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
+  };
+
+  const handleDonate = (item: DonationItem) => {
+    setSelectedItem(item);
+    setDonorName("");
+    setDonorPhone("");
+    setDonorObs("");
+    setDonationType("");
+    setPixFile("");
+    setConfirmAlert(false);
+    setModalOpen(true);
+  };
+
+  const confirmDonation = async () => {
+    if (
+      !selectedItem ||
+      !donorName.trim() ||
+      !donorPhone.trim() ||
+      !donationType
+    ) {
+      return;
+    }
+
+    if (donationType === "PIX" && !pixFile) {
+      alert("Anexe o comprovante PIX");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch("/api/donations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId: selectedItem.itemId,
+          donorName,
+          donorPhone,
+          donorObs,
+          donationType,
+          pixFile: donationType === "PIX" ? pixFile : null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao processar");
+      }
+
+      await loadItems();
+      setModalOpen(false);
+      alert("Doação confirmada! 🙏");
+
+      // Limpar campos
+      setDonorName("");
+      setDonorPhone("");
+      setDonorObs("");
+      setDonationType("");
+      setPixFile("");
+      setSelectedItem(null);
+      setConfirmAlert(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Erro");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Arquivo muito grande (máx 5MB)");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      alert("Apenas imagens");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPixFile(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const days = ["Todos", "Sexta-feira 06/02", "Sábado 07/02", "Domingo 08/02"];
 
@@ -59,9 +133,7 @@ export default function Home() {
 
   const groupedItems = filteredItems.reduce((acc, item) => {
     const key = `${item.day} - ${item.meal}`;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
+    if (!acc[key]) acc[key] = [];
     acc[key].push(item);
     return acc;
   }, {} as Record<string, DonationItem[]>);
@@ -70,49 +142,16 @@ export default function Home() {
   const donatedItems = items.filter((item) => item.donated).length;
   const progressPercentage = Math.round((donatedItems / totalItems) * 100);
 
-  const handleDonate = (item: DonationItem) => {
-    setSelectedItem(item);
-    setDonorName(item.donorName);
-    setModalOpen(true);
-  };
-
-  const confirmDonation = () => {
-    if (selectedItem && donorName.trim() && donorPhone.trim()) {
-      const now = new Date();
-      const dateStr = now.toLocaleString();
-      setItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === selectedItem.id
-            ? {
-                ...item,
-                donated: true,
-                donorName: donorName.trim(),
-                donorPhone: donorPhone.trim(),
-                donorObs: donorObs.trim(),
-                donationDate: dateStr,
-              }
-            : item
-        )
-      );
-      setModalOpen(false);
-
-      setDonorName("");
-      setDonorPhone("");
-      setDonorObs("");
-      setSelectedItem(null);
-      setConfirmAlert(false);
-    }
-  };
-
-  const cancelDonation = (item: DonationItem) => {
-    // Não permitir cancelar após confirmação
-    // setItems((prevItems) =>
-    //   prevItems.map((i) =>
-    //     i.id === item.id ? { ...i, donated: false, donorName: "" } : i
-    //   )
-    // );
-    alert("A doação já foi confirmada e não pode ser cancelada.");
-  };
+  if (loading && items.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#1e3a8a] mx-auto mb-4" />
+          <p className="text-xl">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full">
@@ -151,7 +190,9 @@ export default function Home() {
           </p>
 
           <div className="inline-block bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] text-white px-4 sm:px-8 py-2 sm:py-3 rounded-full shadow-lg">
-            <p className="text-base sm:text-lg font-semibold">Organização das Refeições</p>
+            <p className="text-base sm:text-lg font-semibold">
+              Organização das Refeições
+            </p>
           </div>
         </div>
       </header>
@@ -244,43 +285,48 @@ export default function Home() {
 
               <div className="bg-white/90 backdrop-blur-sm rounded-b-2xl sm:rounded-b-3xl shadow-xl p-3 sm:p-6 border-2 sm:border-4 border-t-0 border-[#1e3a8a]/20">
                 <div className="grid gap-2 sm:gap-4">
-                  {groupItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-300 ${
-                        item.donated
-                          ? "bg-gradient-to-r from-green-50 to-green-100 border-green-400 shadow-md"
-                          : "bg-white border-gray-200 hover:border-[#d4af37] hover:shadow-lg"
-                      }`}
-                    >
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
-                        <div className="flex-1">
-                          <p
-                            className={`text-lg font-semibold ${
-                              item.donated ? "text-green-800" : "text-gray-800"
-                            }`}
-                          >
-                            {item.name}
-                          </p>
-                          {item.donated && item.donorName && (
-                            <p className="text-sm text-green-600 mt-1 font-medium">
-                              ✓ Doado por: {item.donorName}
+                  {groupItems.map((item) => {
+                    const itemDonorName = getDonorName(item);
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-300 ${
+                          item.donated
+                            ? "bg-gradient-to-r from-green-50 to-green-100 border-green-400 shadow-md"
+                            : "bg-white border-gray-200 hover:border-[#d4af37] hover:shadow-lg"
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+                          <div className="flex-1">
+                            <p
+                              className={`text-lg font-semibold ${
+                                item.donated
+                                  ? "text-green-800"
+                                  : "text-gray-800"
+                              }`}
+                            >
+                              {item.name}
                             </p>
+                            {item.donated && itemDonorName && (
+                              <p className="text-sm text-green-600 mt-1 font-medium">
+                                ✓ Doado por: {itemDonorName}
+                              </p>
+                            )}
+                          </div>
+
+                          {!item.donated && (
+                            <button
+                              onClick={() => handleDonate(item)}
+                              className="px-4 sm:px-6 py-2 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] hover:from-[#3b82f6] hover:to-[#1e3a8a] text-white font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+                            >
+                              Doar
+                            </button>
                           )}
                         </div>
-
-                        {/* Se já doado, não exibe botão Cancelar */}
-                        {!item.donated && (
-                          <button
-                            onClick={() => handleDonate(item)}
-                            className="px-4 sm:px-6 py-2 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] hover:from-[#3b82f6] hover:to-[#1e3a8a] text-white font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
-                          >
-                            Doar
-                          </button>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -319,7 +365,9 @@ export default function Home() {
             <p className="text-sm sm:text-lg italic text-gray-600">
               "Cada um contribua conforme o impulso do seu coração."
             </p>
-            <p className="text-xs sm:text-sm text-gray-500 mt-2">(2 Coríntios 9,7)</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">
+              (2 Coríntios 9,7)
+            </p>
           </div>
         </div>
       </footer>
@@ -327,7 +375,7 @@ export default function Home() {
       {/* Donation Modal */}
       {modalOpen && selectedItem && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-slide-up border-4 border-[#d4af37]">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-slide-up border-4 border-[#d4af37] max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold text-[#1e3a8a] mb-4">
               Confirmar Doação
             </h3>
@@ -355,68 +403,81 @@ export default function Home() {
                 type="tel"
                 value={donorPhone}
                 onChange={(e) => setDonorPhone(e.target.value)}
-                placeholder="Digite seu telefone"
+                placeholder="(62) 99999-9999"
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg"
               />
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 font-semibold mb-2 text-lg">Tipo de doação <span className="text-red-500">*</span></label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2">
+              <label className="block text-gray-700 font-semibold mb-2 text-lg">
+                Tipo de doação <span className="text-red-500">*</span>
+              </label>
+              <div className="flex flex-col gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
                     name="donationType"
                     value="Item"
                     checked={donationType === "Item"}
-                    onChange={() => setDonationType("Item")}
+                    onChange={() => {
+                      setDonationType("Item");
+                      setPixFile("");
+                    }}
+                    className="w-4 h-4"
                   />
-                  {selectedItem.name}
+                  <span className="text-base">
+                    Item físico: {selectedItem.name}
+                  </span>
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
                     name="donationType"
                     value="PIX"
                     checked={donationType === "PIX"}
                     onChange={() => setDonationType("PIX")}
+                    className="w-4 h-4"
                   />
-                  PIX
+                  <span className="text-base">
+                    Valor em PIX para compra do item
+                  </span>
                 </label>
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 font-semibold mb-2 text-lg">Observação (opcional)</label>
-              <input
-                type="text"
+              <label className="block text-gray-700 font-semibold mb-2 text-lg">
+                Observação (opcional)
+              </label>
+              <textarea
                 value={donorObs}
                 onChange={(e) => setDonorObs(e.target.value)}
-                placeholder="Observação"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg"
+                placeholder="Alguma observação sobre a doação"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg resize-none"
+                rows={3}
               />
             </div>
             {donationType === "PIX" && (
               <div className="mb-4">
-                <label className="block text-gray-700 font-semibold mb-2 text-lg">Comprovante PIX <span className="text-red-500">*</span></label>
+                <label className="block text-gray-700 font-semibold mb-2 text-lg">
+                  Comprovante PIX <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setPixFile(reader.result as string);
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
+                  onChange={handleFileChange}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-lg"
                 />
                 {pixFile && (
                   <div className="mt-2">
-                    <img src={pixFile} alt="Comprovante PIX" className="max-h-32 rounded border" />
+                    <img
+                      src={pixFile}
+                      alt="Comprovante PIX"
+                      className="max-h-32 rounded border"
+                    />
                   </div>
                 )}
+                <p className="text-sm text-gray-500 mt-1">
+                  Tamanho máximo: 5MB
+                </p>
               </div>
             )}
             {!confirmAlert && (
@@ -432,10 +493,13 @@ export default function Home() {
                   setDonorName("");
                   setDonorPhone("");
                   setDonorObs("");
+                  setDonationType("");
+                  setPixFile("");
                   setSelectedItem(null);
                   setConfirmAlert(false);
                 }}
                 className="flex-1 px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-xl transition-all duration-300"
+                disabled={loading}
               >
                 Cancelar
               </button>
@@ -443,22 +507,32 @@ export default function Home() {
                 <button
                   onClick={() => setConfirmAlert(true)}
                   disabled={
-                    !(donorName.trim().length >= 3 && donorPhone.trim() && donationType && (donationType === "PIX" ? pixFile : true))
+                    loading ||
+                    !donorName.trim() ||
+                    donorName.trim().length < 3 ||
+                    !donorPhone.trim() ||
+                    !donationType ||
+                    (donationType === "PIX" && !pixFile)
                   }
                   className={`flex-1 px-6 py-3 font-semibold rounded-xl transition-all duration-300 ${
-                    donorName.trim().length >= 3 && donorPhone.trim() && donationType && (donationType === "PIX" ? pixFile : true)
+                    donorName.trim().length >= 3 &&
+                    donorPhone.trim() &&
+                    donationType &&
+                    (donationType === "PIX" ? pixFile : true) &&
+                    !loading
                       ? "bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] hover:from-[#3b82f6] hover:to-[#1e3a8a] text-white shadow-lg hover:shadow-xl"
                       : "bg-gray-200 text-gray-400 cursor-not-allowed"
                   }`}
                 >
-                  Confirmar
+                  {loading ? "Processando..." : "Confirmar"}
                 </button>
               ) : (
                 <button
                   onClick={confirmDonation}
-                  className="flex-1 px-6 py-3 font-semibold rounded-xl bg-green-600 text-white shadow-lg hover:bg-green-700 transition-all duration-300"
+                  disabled={loading}
+                  className="flex-1 px-6 py-3 font-semibold rounded-xl bg-green-600 text-white shadow-lg hover:bg-green-700 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  Sim, estou ciente e quero doar
+                  {loading ? "Salvando..." : "Sim, estou ciente e quero doar"}
                 </button>
               )}
             </div>
