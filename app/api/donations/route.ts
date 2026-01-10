@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { savePixReceipt } from "@/lib/upload";
 import { NextRequest, NextResponse } from "next/server";
 
-// GET - Buscar todos os itens
+// GET - Buscar todos os itens de doação
 export async function GET() {
   try {
     const items = await prisma.donationItem.findMany({
@@ -16,17 +16,17 @@ export async function GET() {
       orderBy: [{ day: "asc" }, { category: "asc" }],
     });
 
-    return NextResponse.json({ items });
+    return NextResponse.json({ items }, { status: 200 });
   } catch (error) {
     console.error("Erro ao buscar itens:", error);
     return NextResponse.json(
-      { error: "Erro ao buscar itens" },
+      { error: "Erro ao buscar itens do banco de dados" },
       { status: 500 }
     );
   }
 }
 
-// POST - Criar doação
+// POST - Criar nova doação
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -35,17 +35,42 @@ export async function POST(request: NextRequest) {
 
     // Validações básicas
     if (!itemId || !donorName || !donorPhone || !donationType) {
-      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
-    }
-
-    if (donationType === "PIX" && !pixFile) {
       return NextResponse.json(
-        { error: "Comprovante PIX obrigatório" },
+        { error: "Dados incompletos. Preencha todos os campos obrigatórios." },
         { status: 400 }
       );
     }
 
-    // Buscar item
+    // Validar nome mínimo
+    if (donorName.trim().length < 3) {
+      return NextResponse.json(
+        { error: "Nome deve ter pelo menos 3 caracteres" },
+        { status: 400 }
+      );
+    }
+
+    // Validar telefone básico
+    if (donorPhone.trim().length < 10) {
+      return NextResponse.json({ error: "Telefone inválido" }, { status: 400 });
+    }
+
+    // Validar tipo de doação
+    if (!["Item", "PIX"].includes(donationType)) {
+      return NextResponse.json(
+        { error: "Tipo de doação inválido" },
+        { status: 400 }
+      );
+    }
+
+    // Se for PIX, validar comprovante
+    if (donationType === "PIX" && !pixFile) {
+      return NextResponse.json(
+        { error: "Comprovante PIX obrigatório para doações em dinheiro" },
+        { status: 400 }
+      );
+    }
+
+    // Buscar item no banco de dados
     const item = await prisma.donationItem.findUnique({
       where: { itemId },
     });
@@ -57,11 +82,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verificar se item já foi doado
     if (item.donated) {
-      return NextResponse.json({ error: "Item já foi doado" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Este item já foi doado por outra pessoa" },
+        { status: 400 }
+      );
     }
 
-    // Criar doação
+    // Criar doação no banco de dados
     const donation = await prisma.donation.create({
       data: {
         donorName: donorName.trim(),
@@ -91,33 +120,46 @@ export async function POST(request: NextRequest) {
         });
       } catch (uploadError) {
         console.error("Erro ao salvar comprovante:", uploadError);
-        // Continua mesmo se falhar o upload (já salvou a doação)
+        // Continua mesmo se falhar o upload (doação já foi salva)
+        // Você pode optar por reverter a transação aqui se preferir
       }
     }
 
-    // Criar log
+    // Criar log de atividade
     await prisma.activityLog.create({
       data: {
         action: "DONATION_CREATED",
-        description: `Doação realizada: ${item.name}`,
+        description: `Doação realizada: ${item.name} por ${donorName.trim()}`,
         metadata: {
           donationId: donation.id,
           itemId: item.itemId,
-          donorName,
+          donorName: donorName.trim(),
           donationType,
         },
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      donation,
-      message: "Doação confirmada com sucesso!",
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        donation,
+        message: "Doação confirmada com sucesso!",
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Erro ao criar doação:", error);
+
+    // Verificar se é erro de validação do Prisma
+    if (error instanceof Error && error.message.includes("Unique constraint")) {
+      return NextResponse.json(
+        { error: "Este item já foi doado" },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Erro ao processar doação" },
+      { error: "Erro ao processar doação. Tente novamente." },
       { status: 500 }
     );
   }

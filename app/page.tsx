@@ -2,7 +2,6 @@
 
 import DownloadReportButton from "@/components/DownloadReportButton";
 import { DonationItem, getDonorName } from "@/lib/types";
-
 import { useEffect, useState } from "react";
 
 export default function Home() {
@@ -18,19 +17,26 @@ export default function Home() {
   const [confirmAlert, setConfirmAlert] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Carrega itens da API ao montar o componente
   useEffect(() => {
     loadItems();
   }, []);
 
+  // Função para carregar itens da API
   const loadItems = async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/donations");
+
+      if (!response.ok) {
+        throw new Error("Erro ao carregar dados");
+      }
+
       const data = await response.json();
       setItems(data.items);
     } catch (error) {
       console.error("Erro ao carregar:", error);
-      alert("Erro ao carregar itens");
+      alert("Erro ao carregar itens. Por favor, recarregue a página.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +90,9 @@ export default function Home() {
         throw new Error(data.error || "Erro ao processar");
       }
 
+      // Recarrega os itens da API
       await loadItems();
+
       setModalOpen(false);
       alert("Doação confirmada! 🙏");
 
@@ -97,7 +105,10 @@ export default function Home() {
       setSelectedItem(null);
       setConfirmAlert(false);
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Erro");
+      console.error("Erro ao confirmar doação:", error);
+      alert(
+        error instanceof Error ? error.message : "Erro ao processar doação"
+      );
     } finally {
       setLoading(false);
     }
@@ -113,7 +124,7 @@ export default function Home() {
     }
 
     if (!file.type.startsWith("image/")) {
-      alert("Apenas imagens");
+      alert("Apenas imagens são permitidas");
       return;
     }
 
@@ -140,7 +151,8 @@ export default function Home() {
 
   const totalItems = items.length;
   const donatedItems = items.filter((item) => item.donated).length;
-  const progressPercentage = Math.round((donatedItems / totalItems) * 100);
+  const progressPercentage =
+    totalItems > 0 ? Math.round((donatedItems / totalItems) * 100) : 0;
 
   if (loading && items.length === 0) {
     return (
@@ -158,6 +170,7 @@ export default function Home() {
       <div className="max-w-6xl mx-auto px-2 sm:px-4 pt-6 sm:pt-8 flex justify-end w-full">
         <DownloadReportButton items={items} />
       </div>
+
       {/* Decorative Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-20 left-10 w-64 h-64 bg-blue-200 rounded-full opacity-20 blur-3xl animate-float"></div>
@@ -260,9 +273,10 @@ export default function Home() {
             (item) => item.donated
           ).length;
           const categoryTotal = groupItems.length;
-          const categoryProgress = Math.round(
-            (categoryDonated / categoryTotal) * 100
-          );
+          const categoryProgress =
+            categoryTotal > 0
+              ? Math.round((categoryDonated / categoryTotal) * 100)
+              : 0;
 
           return (
             <div key={groupKey} className="mb-12 animate-slide-up">
