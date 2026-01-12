@@ -280,7 +280,7 @@ export default function DownloadReportButton({
         img.src = imgData;
         await new Promise<void>((r) => (img.onload = () => r()));
 
-        const maxW = pageWidth - 40;
+        const maxW = pageWidth - 150;
         const ratio = img.width / img.height;
         const h = maxW / ratio;
         const x = (pageWidth - maxW) / 2;
