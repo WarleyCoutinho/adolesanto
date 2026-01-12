@@ -1,98 +1,237 @@
-# Adolesanto - Sistema de Doações
+Adolesanto – Sistema de Doações (Technical Overview)
 
-Sistema de acompanhamento de doações para o evento Adolesanto da Paróquia Santíssima Trindade (06, 07 e 08 de fevereiro).
+Sistema web para gerenciamento e acompanhamento de doações do evento Adolesanto, da Paróquia Santíssima Trindade (06, 07 e 08 de fevereiro).
 
-## 🎨 Características
+O projeto foi desenvolvido com Next.js App Router, foco em organização de dados, visualização clara do progresso e geração de relatórios profissionais em PDF, incluindo comprovantes PIX.
 
-- ✅ Design inspirado nas cores do evento (azul e dourado)
-- ✅ Sistema de progresso visual das doações
-- ✅ Armazenamento local (LocalStorage) - sem necessidade de banco de dados
-- ✅ Interface responsiva e animada
-- ✅ Filtro por dia do evento
-- ✅ Sistema de confirmação de doações com nome do doador
+🧠 Visão Geral da Arquitetura
 
-## 🚀 Deploy na Vercel
+Frontend e Backend no mesmo projeto (Next.js App Router)
 
-### Opção 1: Via Interface da Vercel
+API interna via app/api
 
-1. Acesse [vercel.com](https://vercel.com)
-2. Faça login ou crie uma conta
-3. Clique em "Add New..." → "Project"
-4. Importe seu repositório do GitHub
-5. Configure:
-   - Framework Preset: Next.js
-   - Build Command: `npm run build`
-   - Output Directory: `.next`
-6. Clique em "Deploy"
+Persistência de dados:
 
-### Opção 2: Via CLI da Vercel
+Versão inicial: LocalStorage
 
-```bash
-# Instalar Vercel CLI globalmente
-npm i -g vercel
+Versão atual: PostgreSQL + Prisma ORM
 
-# Na pasta do projeto, executar:
-vercel
+Geração de PDF no client-side
 
-# Seguir as instruções no terminal
-# Para deploy de produção:
-vercel --prod
-```
+Armazenamento de comprovantes PIX em base64 no banco
 
-## 💻 Desenvolvimento Local
+Compatível com ambiente serverless (Vercel)
 
-```bash
-# Instalar dependências
-npm install
+🧱 Stack Tecnológica
+Frontend
 
-# Rodar servidor de desenvolvimento
-npm run dev
+React 19
 
-# Abrir http://localhost:3000
-```
+Next.js 16 (App Router)
 
-## 📱 Funcionalidades
+TypeScript
 
-### Para os Organizadores:
-- Visualizar progresso geral e por categoria
-- Acompanhar quem doou cada item
-- Filtrar doações por dia do evento
+Tailwind CSS
 
-### Para os Doadores:
-- Ver lista completa de itens necessários
-- Registrar sua doação com nome
-- Cancelar doação se necessário
+jsPDF
 
-## 🗂️ Estrutura do Projeto
+jsPDF AutoTable
 
-```
+Backend
+
+Next.js Route Handlers (app/api)
+
+Prisma ORM
+
+PostgreSQL
+
+Zod (validação de dados)
+
+📂 Estrutura de Pastas
+
 adolesanto-doacoes/
 ├── app/
-│   ├── data.ts          # Lista completa de itens para doação
-│   ├── globals.css      # Estilos globais
-│   ├── layout.tsx       # Layout raiz
-│   └── page.tsx         # Página principal
-├── public/              # Arquivos estáticos
+│ ├── api/
+│ │ └── receipts/[id]/route.ts # Endpoint para buscar comprovante PIX
+│ ├── layout.tsx
+│ └── page.tsx
+├── lib/
+│ ├── prisma.ts # Prisma Client
+│ └── types.ts # Tipagens e helpers
+├── prisma/
+│ ├── schema.prisma # Modelos do banco
+│ └── seed.ts # Seed de dados
+├── public/
 ├── package.json
-├── tsconfig.json
 └── tailwind.config.ts
-```
 
-## 🎯 Tecnologias
+🗄️ Modelagem de Dados (Prisma)
+PixReceipt
 
-- Next.js 15 (App Router)
-- React 19
-- TypeScript
-- Tailwind CSS
-- LocalStorage para persistência
+Armazena comprovantes PIX em base64
 
-## 📞 Contato
+Relacionamento 1:1 com doação
 
-**Paróquia Santíssima Trindade**
-- WhatsApp: (62) 99248-6492 | (62) 99248-6496
-- PIX: Warley Coutinho Pereira dos Santos
-- Banco: Neon Pagamentos S.A.
+Seguro para ambiente serverless (sem filesystem)
 
----
+Campos principais:
 
-*"Cada um contribua conforme o impulso do seu coração." (2 Coríntios 9,7)*
+id
+
+base64
+
+mimeType
+
+donationId
+
+uploadedAt
+
+🔌 API Interna
+GET /api/receipts/[id]
+
+Retorna o comprovante PIX como imagem binária.
+
+Fluxo:
+
+Busca registro no banco via Prisma
+
+Converte base64 → Buffer
+
+Retorna imagem com headers corretos
+
+Compatível com:
+
+Android
+
+iOS
+
+WhatsApp
+
+WEBP / PNG / JPEG
+
+📄 Geração de PDF
+
+A geração do PDF ocorre no client-side, utilizando:
+
+jsPDF
+
+jsPDF AutoTable
+
+Seções do PDF
+
+Cabeçalho institucional
+
+Resumo Geral
+
+Barra de progresso dinâmica
+
+Tabela completa de doações
+
+Resumo por item
+
+Lista de doadores
+
+Comprovantes PIX (uma página por comprovante)
+
+Tratamento de Imagens
+
+Imagens são carregadas via API
+
+Conversão automática:
+
+WEBP / PNG → JPEG
+
+Conversão feita via Canvas
+
+Evita falhas do jsPDF com formatos não suportados
+
+📊 Barra de Progresso
+
+Percentual calculado dinamicamente
+
+Regra visual:
+
+Até 99% → percentual no final da barra
+
+100% → percentual centralizado
+
+Cores contrastantes para evitar perda de legibilidade
+
+🚀 Deploy (Vercel)
+
+Projeto preparado para deploy serverless.
+
+Configuração recomendada
+
+Framework: Next.js
+
+Build Command: npm run build
+
+Output Directory: .next
+
+Banco: PostgreSQL (Neon / Supabase / Railway)
+
+🧪 Desenvolvimento Local
+
+Instalar dependências:
+
+npm install
+
+Gerar cliente Prisma:
+
+npx prisma generate
+
+Rodar migrations:
+
+npx prisma migrate dev
+
+Iniciar servidor:
+
+npm run dev
+
+🧩 Scripts
+
+dev – ambiente de desenvolvimento
+
+build – build de produção
+
+start – executar build
+
+lint – análise estática
+
+seed – popular banco de dados
+
+⭐ Desafio Técnico
+
+Este projeto foi desenvolvido sem bibliotecas de componentes prontos (ex: ShadCN UI).
+
+Objetivos do desafio:
+
+Dominar App Router
+
+Trabalhar com PDF em produção
+
+Resolver limitações de imagens no jsPDF
+
+Garantir compatibilidade mobile
+
+Manter código simples e legível
+
+Se este projeto te ajudou:
+
+deixe uma ⭐ no repositório
+
+contribuições são bem-vindas
+
+issues e PRs são incentivados
+
+📞 Contato
+
+Paróquia Santíssima Trindade
+
+WhatsApp: (62) 99248-6492 | (62) 99248-6496
+PIX: Warley Coutinho Pereira dos Santos
+Banco: Neon Pagamentos S.A.
+
+"Cada um contribua conforme o impulso do seu coração."
+2 Coríntios 9,7
