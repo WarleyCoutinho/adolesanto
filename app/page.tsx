@@ -644,6 +644,18 @@ export default function Home() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-2">
+                        Quando a doação for Parcial ou via Pix e o valor
+                        representar kg ou litro, informe na observação a
+                        quantidade correspondente.
+                      </p>
+
+                      <p className="text-sm text-gray-600 mt-2">
+                        Doado até agora:{" "}
+                        <strong>
+                          {(totalQuantity - maxQuantity).toFixed(1)} {unit}
+                        </strong>
+                      </p>
+                      <p className="text-sm text-gray-600 mt-2">
                         Ainda falta:{" "}
                         <strong>
                           {maxQuantity.toFixed(1)} {unit}
@@ -662,7 +674,7 @@ export default function Home() {
               <textarea
                 value={donorObs}
                 onChange={(e) => setDonorObs(e.target.value)}
-                placeholder="Alguma observação sobre a doação"
+                placeholder="Informe a quantidade (kg ou litro) correspondente, caso a doação via Pix seja parcial."
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg resize-none"
                 rows={3}
               />
