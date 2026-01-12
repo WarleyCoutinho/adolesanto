@@ -15,6 +15,36 @@ interface DownloadReportButtonProps {
 export default function DownloadReportButton({
   items,
 }: DownloadReportButtonProps) {
+  // Função auxiliar para converter imagem para base64
+  const loadImageAsBase64 = async (
+    receiptId: string
+  ): Promise<string | null> => {
+    try {
+      // Tentar carregar via API
+      const response = await fetch(`/api/receipts/${receiptId}`);
+
+      if (!response.ok) {
+        console.error(
+          `Erro ao carregar comprovante ${receiptId}:`,
+          response.status
+        );
+        return null;
+      }
+
+      const blob = await response.blob();
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error("Erro ao carregar imagem:", error);
+      return null;
+    }
+  };
+
   const generatePDF = async () => {
     const { jsPDF } = await import("jspdf");
     const autoTable = (await import("jspdf-autotable")).default;
@@ -35,6 +65,7 @@ export default function DownloadReportButton({
     }
 
     const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
 
     // CABEÇALHO
     doc.setFillColor(...primaryColor);
@@ -152,7 +183,6 @@ export default function DownloadReportButton({
 
     donatedItems.forEach((item) => {
       if (item.donations && item.donations.length > 0) {
-        // Item com doações (parciais ou completas)
         item.donations.forEach((donation: any, donationIdx: number) => {
           const donationDate = donation.createdAt
             ? new Date(donation.createdAt).toLocaleString("pt-BR", {
@@ -188,7 +218,6 @@ export default function DownloadReportButton({
         });
         itemIndex++;
       } else {
-        // Item doado sem múltiplas doações (compatibilidade)
         const donorName = getDonorName(item);
         const donorPhone = getDonorPhone(item);
         const donationType = getDonationType(item);
@@ -261,13 +290,13 @@ export default function DownloadReportButton({
 
     yPosition = (doc as any).lastAutoTable.finalY + 15;
 
-    // RESUMO POR ITEM (para itens com doações parciais)
+    // RESUMO POR ITEM
     const itemsWithPartialDonations = items.filter(
       (item) => item.requiresQuantity && (item.donations?.length ?? 0) > 1
     );
 
     if (itemsWithPartialDonations.length > 0) {
-      if (yPosition > doc.internal.pageSize.height - 80) {
+      if (yPosition > pageHeight - 80) {
         doc.addPage();
         yPosition = 20;
       }
@@ -374,7 +403,7 @@ export default function DownloadReportButton({
       }
     });
 
-    if (yPosition > doc.internal.pageSize.height - 80) {
+    if (yPosition > pageHeight - 80) {
       doc.addPage();
       yPosition = 20;
     }
@@ -418,36 +447,296 @@ export default function DownloadReportButton({
       margin: { left: 14, right: 14 },
     });
 
-    // RODAPÉ
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    yPosition = (doc as any).lastAutoTable.finalY + 15;
 
-    if (finalY > doc.internal.pageSize.height - 60) {
+    // COMPROVANTES PIX
+    const pixDonations = donatedItems.flatMap((item) => {
+      if (item.donations && item.donations.length > 0) {
+        return item.donations
+          .filter((d: any) => d.donationType === "PIX" && d.pixReceipt)
+          .map((d: any) => ({
+            item: item.name,
+            donor: d.donorName,
+            phone: d.donorPhone,
+            receipt: d.pixReceipt,
+            quantity: d.partialQuantity
+              ? `${d.partialQuantity} ${item.unit}`
+              : "Completo",
+            date: d.createdAt
+              ? new Date(d.createdAt).toLocaleString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "-",
+          }));
+      }
+      return [];
+    });
+
+    if (pixDonations.length > 0) {
       doc.addPage();
       yPosition = 20;
-    } else {
-      yPosition = finalY;
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...primaryColor);
+      doc.text("Comprovantes PIX", pageWidth / 2, yPosition, {
+        align: "center",
+      });
+
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 100, 100);
+      doc.text(
+        `Total de comprovantes: ${pixDonations.length}`,
+        pageWidth / 2,
+        yPosition + 6,
+        { align: "center" }
+      );
+
+      yPosition += 15;
+
+      // Carregar todas as imagens primeiro usando o ID do comprovante
+      console.log("Carregando comprovantes PIX...");
+      const loadedReceipts = await Promise.all(
+        pixDonations.map(async (donation) => {
+          let imageData = null;
+
+          try {
+            if (donation.receipt.id) {
+              console.log(`Carregando comprovante ID: ${donation.receipt.id}`);
+              imageData = await loadImageAsBase64(donation.receipt.id);
+              console.log(
+                `Comprovante ${donation.receipt.id} carregado:`,
+                imageData ? "Sucesso" : "Falhou"
+              );
+            }
+          } catch (error) {
+            console.error("Erro ao carregar comprovante:", error);
+          }
+
+          return {
+            ...donation,
+            imageData,
+          };
+        })
+      );
+
+      for (let i = 0; i < loadedReceipts.length; i++) {
+        const donation = loadedReceipts[i];
+
+        if (i > 0) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        // CABEÇALHO DO COMPROVANTE
+        doc.setFillColor(...primaryColor);
+        doc.roundedRect(14, yPosition, pageWidth - 28, 30, 3, 3, "F");
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(255, 255, 255);
+        doc.text(`Comprovante PIX #${i + 1}`, 20, yPosition + 10);
+
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...secondaryColor);
+        doc.text(`Data: ${donation.date}`, 20, yPosition + 17);
+
+        doc.setTextColor(255, 255, 255);
+        doc.text(
+          `${i + 1} de ${pixDonations.length}`,
+          pageWidth - 20,
+          yPosition + 13,
+          { align: "right" }
+        );
+
+        yPosition += 35;
+
+        // BOX DE INFORMAÇÕES
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(14, yPosition, pageWidth - 28, 32, 2, 2, "F");
+
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...primaryColor);
+        doc.text("Informações da Doação:", 20, yPosition + 7);
+
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(60, 60, 60);
+
+        doc.text(`Item doado:`, 20, yPosition + 14);
+        doc.setFont("helvetica", "bold");
+        doc.text(donation.item, 45, yPosition + 14);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(`Quantidade:`, 20, yPosition + 20);
+        doc.setFont("helvetica", "bold");
+        doc.text(donation.quantity, 45, yPosition + 20);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(`Doador:`, 20, yPosition + 26);
+        doc.setFont("helvetica", "bold");
+        doc.text(donation.donor, 45, yPosition + 26);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(`Telefone:`, pageWidth / 2 + 10, yPosition + 26);
+        doc.setFont("helvetica", "bold");
+        doc.text(donation.phone, pageWidth / 2 + 30, yPosition + 26);
+
+        yPosition += 38;
+
+        // TÍTULO DA IMAGEM
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...primaryColor);
+        doc.text("Comprovante de Transferência:", 14, yPosition);
+
+        yPosition += 7;
+
+        // IMAGEM DO COMPROVANTE
+        if (donation.imageData) {
+          try {
+            const maxImgWidth = pageWidth - 28;
+            const maxImgHeight = pageHeight - yPosition - 25;
+
+            let imgWidth = maxImgWidth;
+            let imgHeight = maxImgHeight;
+
+            const imgX = (pageWidth - imgWidth) / 2;
+
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.5);
+            doc.rect(imgX - 1, yPosition - 1, imgWidth + 2, imgHeight + 2);
+
+            doc.addImage(
+              donation.imageData,
+              "JPEG",
+              imgX,
+              yPosition,
+              imgWidth,
+              imgHeight,
+              undefined,
+              "FAST"
+            );
+
+            yPosition += imgHeight + 3;
+          } catch (error) {
+            console.error("Erro ao adicionar imagem ao PDF:", error);
+
+            doc.setFillColor(255, 240, 240);
+            doc.roundedRect(14, yPosition, pageWidth - 28, 20, 2, 2, "F");
+
+            doc.setFontSize(9);
+            doc.setTextColor(200, 0, 0);
+            doc.setFont("helvetica", "bold");
+            doc.text(
+              "⚠ Erro ao processar imagem do comprovante",
+              20,
+              yPosition + 8
+            );
+
+            doc.setFontSize(7);
+            doc.setFont("helvetica", "normal");
+            doc.text(
+              "Entre em contato com o suporte técnico",
+              20,
+              yPosition + 14
+            );
+
+            yPosition += 25;
+          }
+        } else {
+          doc.setFillColor(255, 250, 230);
+          doc.roundedRect(14, yPosition, pageWidth - 28, 35, 2, 2, "F");
+
+          doc.setFontSize(9);
+          doc.setTextColor(200, 100, 0);
+          doc.setFont("helvetica", "bold");
+          doc.text("⚠ Comprovante não disponível", 20, yPosition + 10);
+
+          doc.setFontSize(7);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(100, 100, 100);
+
+          if (donation.receipt.fileName) {
+            doc.text(
+              `Arquivo: ${donation.receipt.fileName}`,
+              20,
+              yPosition + 18
+            );
+          }
+          if (donation.receipt.filePath) {
+            doc.text(`Path: ${donation.receipt.filePath}`, 20, yPosition + 24);
+          }
+
+          doc.text(
+            "Entre em contato com o organizador para verificar o comprovante",
+            20,
+            yPosition + 30
+          );
+
+          yPosition += 40;
+        }
+
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        doc.setFont("helvetica", "italic");
+        doc.text(
+          `Documento gerado automaticamente pelo sistema ADOLESANTO`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: "center" }
+        );
+      }
     }
 
-    doc.setFillColor(...primaryColor);
-    doc.roundedRect(14, yPosition, pageWidth - 28, 35, 3, 3, "F");
+    // RODAPÉ FINAL
+    doc.addPage();
+    yPosition = pageHeight / 2 - 30;
 
-    doc.setFontSize(10);
+    doc.setFillColor(...primaryColor);
+    doc.roundedRect(14, yPosition, pageWidth - 28, 45, 3, 3, "F");
+
+    doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text("Informações de Contato", 20, yPosition + 8);
+    doc.text("Informações de Contato", pageWidth / 2, yPosition + 10, {
+      align: "center",
+    });
 
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text("WhatsApp: (62) 99248-6492 | (62) 99248-6496", 20, yPosition + 16);
+    doc.text(
+      "WhatsApp: (62) 99248-6492 | (62) 99248-6496",
+      pageWidth / 2,
+      yPosition + 20,
+      {
+        align: "center",
+      }
+    );
     doc.text(
       "PIX: (62) 99468-9297 | Banco: Neon Pagamentos S.A.",
-      20,
-      yPosition + 22
+      pageWidth / 2,
+      yPosition + 26,
+      { align: "center" }
     );
-    doc.text("Titular: Warley Coutinho Pereira dos Santos", 20, yPosition + 28);
+    doc.text(
+      "Titular: Warley Coutinho Pereira dos Santos",
+      pageWidth / 2,
+      yPosition + 32,
+      {
+        align: "center",
+      }
+    );
 
-    yPosition += 40;
-    doc.setFontSize(8);
+    yPosition += 50;
+    doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(100, 100, 100);
     doc.text(
@@ -463,12 +752,9 @@ export default function DownloadReportButton({
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text(
-        `Página ${i} de ${pageCount}`,
-        pageWidth / 2,
-        doc.internal.pageSize.height - 10,
-        { align: "center" }
-      );
+      doc.text(`Página ${i} de ${pageCount}`, pageWidth / 2, pageHeight - 10, {
+        align: "center",
+      });
     }
 
     const fileName = `relatorio-doacoes-adolesanto-${

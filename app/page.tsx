@@ -90,17 +90,18 @@ export default function Home() {
       return;
     }
 
-    if (donationType === "Item" && isPartialDonation) {
+    if (isPartialDonation) {
       if (!partialQuantity || parseFloat(partialQuantity) <= 0) {
         alert("Digite uma quantidade válida");
         return;
       }
 
       const { totalQuantity } = isMeasurableItem(selectedItem.name);
+      const remainingQty = selectedItem.remainingQuantity || totalQuantity;
       const donatedQty = parseFloat(partialQuantity);
 
-      if (donatedQty > totalQuantity) {
-        alert(`A quantidade não pode ser maior que ${totalQuantity}`);
+      if (donatedQty > remainingQty) {
+        alert(`A quantidade não pode ser maior que ${remainingQty}`);
         return;
       }
     }
@@ -118,12 +119,10 @@ export default function Home() {
           donorObs,
           donationType,
           pixFile: donationType === "PIX" ? pixFile : null,
-          isPartialDonation:
-            donationType === "Item" ? isPartialDonation : false,
-          partialQuantity:
-            donationType === "Item" && isPartialDonation
-              ? parseFloat(partialQuantity)
-              : null,
+          isPartialDonation: isPartialDonation,
+          partialQuantity: isPartialDonation
+            ? parseFloat(partialQuantity)
+            : null,
         }),
       });
 
@@ -136,7 +135,7 @@ export default function Home() {
       await loadItems();
 
       setModalOpen(false);
-      alert("Doação confirmada! 🙏");
+      alert(data.message || "Doação confirmada! 🙏");
 
       setDonorName("");
       setDonorPhone("");
@@ -590,71 +589,71 @@ export default function Home() {
               </div>
             </div>
 
-            {donationType === "Item" &&
-              (() => {
-                const { isMeasurable, unit, totalQuantity } = isMeasurableItem(
-                  selectedItem.name
-                );
+            {(() => {
+              const { isMeasurable, unit, totalQuantity } = isMeasurableItem(
+                selectedItem.name
+              );
 
-                if (!isMeasurable) return null;
+              if (!isMeasurable) return null;
 
-                const maxQuantity =
-                  selectedItem.remainingQuantity || totalQuantity;
+              const maxQuantity =
+                selectedItem.remainingQuantity || totalQuantity;
 
-                return (
-                  <div className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-                    <div className="mb-3">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={isPartialDonation}
-                          onChange={(e) => {
-                            setIsPartialDonation(e.target.checked);
-                            if (!e.target.checked) setPartialQuantity("");
-                          }}
-                          className="w-4 h-4"
-                        />
-                        <span className="text-base font-semibold text-blue-900">
-                          💡 Doar apenas uma parte deste item
-                        </span>
+              return (
+                <div className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                  <div className="mb-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isPartialDonation}
+                        onChange={(e) => {
+                          setIsPartialDonation(e.target.checked);
+                          if (!e.target.checked) setPartialQuantity("");
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-base font-semibold text-blue-900">
+                        💡 Doar apenas uma parte deste item
+                      </span>
+                    </label>
+                    <p className="text-sm text-blue-700 mt-1 ml-6">
+                      Doe o quanto puder!{" "}
+                      {donationType === "PIX" && "(Via PIX ou Item físico)"}
+                    </p>
+                  </div>
+
+                  {isPartialDonation && (
+                    <div className="mt-3">
+                      <label className="block text-gray-700 font-semibold mb-2">
+                        Quantidade a doar{" "}
+                        <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-sm text-blue-700 mt-1 ml-6">
-                        Doe o quanto puder!
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          max={maxQuantity}
+                          value={partialQuantity}
+                          onChange={(e) => setPartialQuantity(e.target.value)}
+                          placeholder={`Máx: ${maxQuantity.toFixed(1)}`}
+                          className="flex-1 px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg"
+                        />
+                        <span className="text-lg font-semibold text-gray-700 min-w-[60px]">
+                          {unit}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-2">
+                        Ainda falta:{" "}
+                        <strong>
+                          {maxQuantity.toFixed(1)} {unit}
+                        </strong>
                       </p>
                     </div>
-
-                    {isPartialDonation && (
-                      <div className="mt-3">
-                        <label className="block text-gray-700 font-semibold mb-2">
-                          Quantidade a doar{" "}
-                          <span className="text-red-500">*</span>
-                        </label>
-                        <div className="flex gap-2 items-center">
-                          <input
-                            type="number"
-                            step="0.1"
-                            min="0.1"
-                            max={maxQuantity}
-                            value={partialQuantity}
-                            onChange={(e) => setPartialQuantity(e.target.value)}
-                            placeholder={`Máx: ${maxQuantity.toFixed(1)}`}
-                            className="flex-1 px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-[#1e3a8a] text-lg"
-                          />
-                          <span className="text-lg font-semibold text-gray-700 min-w-[60px]">
-                            {unit}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-2">
-                          Ainda falta:{" "}
-                          <strong>
-                            {maxQuantity.toFixed(1)} {unit}
-                          </strong>
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="mb-4">
               <label className="block text-gray-700 font-semibold mb-2 text-lg">
@@ -731,8 +730,7 @@ export default function Home() {
                     !donorPhone.trim() ||
                     !donationType ||
                     (donationType === "PIX" && !pixFile) ||
-                    (donationType === "Item" &&
-                      isPartialDonation &&
+                    (isPartialDonation &&
                       (!partialQuantity || parseFloat(partialQuantity) <= 0))
                   }
                   className={`flex-1 px-6 py-3 font-semibold rounded-xl transition-all duration-300 ${
