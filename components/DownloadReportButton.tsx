@@ -35,6 +35,25 @@ export default function DownloadReportButton({
     }
   };
 
+  // 🔥 Converte WEBP / PNG / qualquer formato → JPEG (jsPDF-safe)
+  const convertToJpeg = async (dataUrl: string): Promise<string> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+
+        resolve(canvas.toDataURL("image/jpeg", 0.9));
+      };
+      img.src = dataUrl;
+    });
+
   /* ================= PDF ================= */
   const generatePDF = async () => {
     const { jsPDF } = await import("jspdf");
@@ -44,8 +63,8 @@ export default function DownloadReportButton({
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
 
-    const primary: [number, number, number] = [30, 58, 138];
-    const secondary: [number, number, number] = [212, 175, 55];
+    const primary: [number, number, number] = [30, 58, 138]; // azul
+    const secondary: [number, number, number] = [212, 175, 55]; // dourado
     const lightGray: [number, number, number] = [243, 244, 246];
 
     const donatedItems = items.filter(
@@ -63,7 +82,7 @@ export default function DownloadReportButton({
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(28);
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(255);
     doc.text("ADOLESANTO", pageWidth / 2, 20, { align: "center" });
 
     doc.setFont("helvetica", "italic");
@@ -71,26 +90,22 @@ export default function DownloadReportButton({
     doc.setTextColor(...secondary);
     doc.text("Santíssima Trindade", pageWidth / 2, 28, { align: "center" });
 
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(255);
     doc.text("06, 07 e 08 de fevereiro", pageWidth / 2, 36, {
       align: "center",
     });
 
     doc.setFontSize(10);
-    doc.text("Relatório de Doações", pageWidth / 2, 43, {
-      align: "center",
-    });
+    doc.text("Relatório de Doações", pageWidth / 2, 43, { align: "center" });
 
     let y = 60;
-
     doc.setFontSize(9);
     doc.setTextColor(120);
     doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, y);
     y += 10;
 
-    /* ================= ESTATÍSTICAS ================= */
+    /* ================= RESUMO GERAL ================= */
     const total = items.length;
     const completos = items.filter((i) => i.donated).length;
     const parciais = donatedItems.length - completos;
@@ -101,12 +116,10 @@ export default function DownloadReportButton({
     doc.roundedRect(14, y, pageWidth - 28, 35, 3, 3, "F");
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
     doc.setTextColor(...primary);
     doc.text("Resumo Geral", 20, y + 8);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
     doc.setTextColor(60);
     doc.text(`Total: ${total}`, 20, y + 16);
     doc.text(`Completos: ${completos}`, 70, y + 16);
@@ -115,19 +128,37 @@ export default function DownloadReportButton({
 
     const barY = y + 28;
     const barWidth = pageWidth - 40;
+    const barX = 20;
+    const barHeight = 5;
 
+    // ===== FUNDO DA BARRA =====
     doc.setFillColor(220, 220, 220);
-    doc.roundedRect(20, barY, barWidth, 4, 2, 2, "F");
+    doc.roundedRect(barX, barY, barWidth, barHeight, 3, 3, "F");
+
+    // ===== BARRA DE PROGRESSO =====
+    const progressWidth = Math.max((barWidth * progresso) / 100, 6);
 
     doc.setFillColor(...secondary);
-    doc.roundedRect(20, barY, (barWidth * progresso) / 100, 4, 2, 2, "F");
+    doc.roundedRect(barX, barY, progressWidth, barHeight, 3, 3, "F");
 
+    // ===== TEXTO DO PERCENTUAL =====
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
-    doc.setTextColor(...secondary);
-    doc.text(`${progresso}%`, pageWidth - 20, barY + 3, {
-      align: "right",
-    });
+
+    if (progresso >= 100) {
+      // 🟢 100% → centralizado na barra
+      doc.setTextColor(255, 255, 255); // branco
+      doc.text("100%", barX + barWidth / 2, barY + barHeight - 1, {
+        align: "center",
+      });
+    } else {
+      // 🔵 1% → 99% → no final da barra
+      doc.setTextColor(30, 58, 138); // azul
+
+      const textX = Math.min(barX + progressWidth + 6, barX + barWidth - 12);
+
+      doc.text(`${progresso}%`, textX, barY + barHeight - 1);
+    }
 
     y += 50;
 
@@ -222,11 +253,10 @@ export default function DownloadReportButton({
 
     donatedItems.forEach((item) => {
       (item.donations || []).forEach((d: any) => {
-        const key = d.donorPhone;
-        donors.set(key, {
+        donors.set(d.donorPhone, {
           name: d.donorName,
           phone: d.donorPhone,
-          count: (donors.get(key)?.count || 0) + 1,
+          count: (donors.get(d.donorPhone)?.count || 0) + 1,
         });
       });
     });
@@ -250,7 +280,6 @@ export default function DownloadReportButton({
       (item.donations || [])
         .filter((d: any) => d.donationType === "PIX" && d.pixReceipt)
         .map((d: any) => ({
-          item: item.name,
           donor: d.donorName,
           phone: d.donorPhone,
           date: d.createdAt
@@ -264,8 +293,6 @@ export default function DownloadReportButton({
       doc.addPage();
       let yy = 20;
 
-      const imgData = await loadImageAsBase64(pix[i].receiptId);
-
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.setTextColor(...primary);
@@ -275,30 +302,22 @@ export default function DownloadReportButton({
 
       yy += 25;
 
-      if (imgData) {
-        const img = new Image();
-        img.src = imgData;
-        await new Promise<void>((r) => (img.onload = () => r()));
+      const imgData = await loadImageAsBase64(pix[i].receiptId);
+      if (!imgData) continue;
 
-        const maxW = pageWidth - 150;
-        const ratio = img.width / img.height;
-        const h = maxW / ratio;
-        const x = (pageWidth - maxW) / 2;
+      const jpegData = await convertToJpeg(imgData);
 
-        doc.setFillColor(245, 246, 248);
-        doc.roundedRect(x - 6, yy - 6, maxW + 12, h + 12, 3, 3, "F");
+      const img = new Image();
+      img.src = jpegData;
+      await new Promise<void>((r) => (img.onload = () => r()));
 
-        doc.addImage(
-          imgData,
-          imgData.startsWith("data:image/png") ? "PNG" : "JPEG",
-          x,
-          yy,
-          maxW,
-          h,
-          undefined,
-          "MEDIUM"
-        );
-      }
+      const maxW = pageWidth - 150;
+      const h = maxW / (img.width / img.height);
+      const x = (pageWidth - maxW) / 2;
+
+      doc.setFillColor("245");
+      doc.roundedRect(x - 6, yy - 6, maxW + 12, h + 12, 3, 3, "F");
+      doc.addImage(jpegData, "JPEG", x, yy, maxW, h, undefined, "MEDIUM");
     }
 
     /* ================= RODAPÉ ================= */
