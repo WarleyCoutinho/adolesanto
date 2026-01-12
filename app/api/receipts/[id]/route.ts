@@ -4,10 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 // GET - Buscar comprovante PIX por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: receiptId } = params;
+    const { id: receiptId } = await params;
 
     // Buscar o comprovante no banco
     const receipt = await prisma.pixReceipt.findUnique({
