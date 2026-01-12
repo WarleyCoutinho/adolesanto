@@ -65,16 +65,14 @@ model Donation {
 }
 
 model PixReceipt {
-  id         String   @id @default(cuid())
-  fileName   String // Nome original do arquivo
-  fileUrl    String // URL ou caminho do arquivo salvo
-  fileSize   Int // Tamanho do arquivo em bytes
-  mimeType   String // Tipo MIME (ex: 'image/jpeg')
+  id         String @id @default(cuid())
+  donationId String @unique
+
+  mimeType   String
+  base64     String
   uploadedAt DateTime @default(now())
 
-  // Relacionamento com doação
-  donation   Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
-  donationId String   @unique
+  donation Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
 
   @@index([uploadedAt])
 }

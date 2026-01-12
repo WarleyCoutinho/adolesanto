@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { savePixReceipt } from "@/lib/upload";
 import { NextRequest, NextResponse } from "next/server";
 
 // Função auxiliar para detectar itens medidos em kg/litros
@@ -256,12 +255,14 @@ export async function POST(request: NextRequest) {
     // Salvar comprovante PIX se fornecido
     if (donationType === "PIX" && pixFile) {
       try {
-        const receiptData = await savePixReceipt(pixFile, donation.id);
+        const [meta, base64] = pixFile.split(",");
+        const mimeType = meta.match(/data:(.*);base64/)?.[1] || "image/jpeg";
 
         await prisma.pixReceipt.create({
           data: {
-            ...receiptData,
             donationId: donation.id,
+            mimeType,
+            base64,
           },
         });
       } catch (uploadError) {

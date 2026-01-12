@@ -1,16 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import fs from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 
 // GET - Buscar comprovante PIX por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    // Next.js 15+ - params é uma Promise
-    const { id: receiptId } = await params;
+    const { id: receiptId } = params;
 
     // Buscar o comprovante no banco
     const receipt = await prisma.pixReceipt.findUnique({
@@ -24,47 +21,20 @@ export async function GET(
       );
     }
 
-    // Ler o arquivo do disco usando fileUrl
-    // Remove a barra inicial se existir, pois path.join já adiciona os separadores
-    const cleanFileUrl = receipt.fileUrl.startsWith("/")
-      ? receipt.fileUrl.substring(1)
-      : receipt.fileUrl;
-    const filePath = path.join(process.cwd(), "public", cleanFileUrl);
+    // Converter base64 em buffer
+    const buffer = Buffer.from(receipt.base64, "base64");
 
-    console.log("🔍 Debug:", {
-      receiptId,
-      fileUrl: receipt.fileUrl,
-      cleanFileUrl,
-      filePath,
-      exists: await fs
-        .access(filePath)
-        .then(() => true)
-        .catch(() => false),
+    // Retornar a imagem diretamente
+    return new NextResponse(buffer, {
+      status: 200,
+      headers: {
+        "Content-Type": receipt.mimeType,
+        "Cache-Control": "public, max-age=31536000",
+      },
     });
-
-    try {
-      const fileBuffer = await fs.readFile(filePath);
-
-      // Retornar a imagem com o tipo MIME correto
-      return new NextResponse(fileBuffer, {
-        status: 200,
-        headers: {
-          "Content-Type": receipt.mimeType,
-          "Content-Length": fileBuffer.length.toString(),
-          "Cache-Control": "public, max-age=31536000",
-        },
-      });
-    } catch (fileError) {
-      console.error("Erro ao ler arquivo:", fileError);
-
-      // Se o arquivo não existe, retornar erro 404
-      return NextResponse.json(
-        { error: "Arquivo de comprovante não encontrado no sistema" },
-        { status: 404 }
-      );
-    }
   } catch (error) {
     console.error("Erro ao buscar comprovante:", error);
+
     return NextResponse.json(
       { error: "Erro ao processar solicitação" },
       { status: 500 }
