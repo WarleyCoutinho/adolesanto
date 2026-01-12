@@ -644,9 +644,8 @@ export default function Home() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-2">
-                        Quando a doação for Parcial ou via Pix e o valor
-                        representar kg ou litro, informe na observação a
-                        quantidade correspondente.
+                        Se a doação for parcial ou via Pix, informe na
+                        observação quantos kg ou litros o valor representa.
                       </p>
 
                       <p className="text-sm text-gray-600 mt-2">
