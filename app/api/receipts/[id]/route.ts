@@ -6,10 +6,11 @@ import path from "path";
 // GET - Buscar comprovante PIX por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const receiptId = params.id;
+    // Next.js 15+ - params é uma Promise
+    const { id: receiptId } = await params;
 
     // Buscar o comprovante no banco
     const receipt = await prisma.pixReceipt.findUnique({
@@ -23,8 +24,23 @@ export async function GET(
       );
     }
 
-    // Ler o arquivo do disco
-    const filePath = path.join(process.cwd(), "public", receipt.filePath);
+    // Ler o arquivo do disco usando fileUrl
+    // Remove a barra inicial se existir, pois path.join já adiciona os separadores
+    const cleanFileUrl = receipt.fileUrl.startsWith("/")
+      ? receipt.fileUrl.substring(1)
+      : receipt.fileUrl;
+    const filePath = path.join(process.cwd(), "public", cleanFileUrl);
+
+    console.log("🔍 Debug:", {
+      receiptId,
+      fileUrl: receipt.fileUrl,
+      cleanFileUrl,
+      filePath,
+      exists: await fs
+        .access(filePath)
+        .then(() => true)
+        .catch(() => false),
+    });
 
     try {
       const fileBuffer = await fs.readFile(filePath);
