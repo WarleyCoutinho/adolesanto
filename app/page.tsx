@@ -556,7 +556,9 @@ export default function Home() {
               <label className="block text-gray-700 font-semibold mb-2 text-lg">
                 Tipo de doação <span className="text-red-500">*</span>
               </label>
+
               <div className="flex flex-col gap-3">
+                {/* Doação por item */}
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -570,9 +572,11 @@ export default function Home() {
                     className="w-4 h-4"
                   />
                   <span className="text-base">
-                    Item físico: {selectedItem.name}
+                    Item físico: <strong>{selectedItem?.name}</strong>
                   </span>
                 </label>
+
+                {/* Doação via PIX */}
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -586,6 +590,26 @@ export default function Home() {
                     Valor em PIX para compra do item
                   </span>
                 </label>
+
+                {/* Chave PIX */}
+                {donationType === "PIX" && (
+                  <div className="mt-2 p-3 rounded-lg border bg-gray-50">
+                    <p className="text-sm text-gray-700 mb-2">
+                      Chave PIX:
+                      <strong className="ml-1">(62) 99468-9297</strong>
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigator.clipboard.writeText("(62) 99468-9297")
+                      }
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                    >
+                      Copiar chave PIX
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
