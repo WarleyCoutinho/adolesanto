@@ -17,7 +17,7 @@ export default function DownloadReportButton({
 }: DownloadReportButtonProps) {
   /* ================= UTIL ================= */
   const loadImageAsBase64 = async (
-    receiptId: string
+    receiptId: string,
   ): Promise<string | null> => {
     try {
       const response = await fetch(`/api/receipts/${receiptId}`);
@@ -68,7 +68,7 @@ export default function DownloadReportButton({
     const lightGray: [number, number, number] = [243, 244, 246];
 
     const donatedItems = items.filter(
-      (i) => i.donated || (i.donations?.length ?? 0) > 0
+      (i) => i.donated || (i.donations?.length ?? 0) > 0,
     );
 
     if (!donatedItems.length) {
@@ -217,7 +217,7 @@ export default function DownloadReportButton({
 
     /* ================= RESUMO POR ITEM ================= */
     const itemsWithPartial = items.filter(
-      (i) => i.requiresQuantity && (i.donations?.length ?? 0) > 1
+      (i) => i.requiresQuantity && (i.donations?.length ?? 0) > 1,
     );
 
     if (itemsWithPartial.length) {
@@ -232,7 +232,7 @@ export default function DownloadReportButton({
           (item.donations || [])
             .map(
               (d: any) =>
-                `${d.donorName} (${d.partialQuantity || 0} ${item.unit})`
+                `${d.donorName} (${d.partialQuantity || 0} ${item.unit})`,
             )
             .join("; "),
         ]),
@@ -286,7 +286,7 @@ export default function DownloadReportButton({
             ? new Date(d.createdAt).toLocaleString("pt-BR")
             : "-",
           receiptId: d.pixReceipt.id,
-        }))
+        })),
     );
 
     for (let i = 0; i < pix.length; i++) {
@@ -334,7 +334,7 @@ export default function DownloadReportButton({
     doc.save(
       `relatorio-doacoes-adolesanto-${
         new Date().toISOString().split("T")[0]
-      }.pdf`
+      }.pdf`,
     );
   };
 
@@ -343,7 +343,7 @@ export default function DownloadReportButton({
       onClick={generatePDF}
       className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-full shadow"
     >
-      Baixar Relatório PDF
+      Doações já realizadas (PDF)
     </button>
   );
 }

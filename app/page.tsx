@@ -2,6 +2,8 @@
 
 import DownloadReportButton from "@/components/DownloadReportButton";
 import { DonationItem, getDonorName } from "@/lib/types";
+import { FileText } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function Home() {
@@ -44,7 +46,7 @@ export default function Home() {
   };
 
   const isMeasurableItem = (
-    itemName: string
+    itemName: string,
   ): { isMeasurable: boolean; unit: string; totalQuantity: number } => {
     const kgMatch = itemName.match(/(\d+(?:,\d+)?)\s*kg/i);
     const literMatch = itemName.match(/(\d+(?:,\d+)?)\s*(?:litros?|lt?)/i);
@@ -149,7 +151,7 @@ export default function Home() {
     } catch (error) {
       console.error("Erro ao confirmar doação:", error);
       alert(
-        error instanceof Error ? error.message : "Erro ao processar doação"
+        error instanceof Error ? error.message : "Erro ao processar doação",
       );
     } finally {
       setLoading(false);
@@ -184,12 +186,15 @@ export default function Home() {
       ? items
       : items.filter((item) => item.day === selectedDay);
 
-  const groupedItems = filteredItems.reduce((acc, item) => {
-    const key = `${item.day} - ${item.meal}`;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {} as Record<string, DonationItem[]>);
+  const groupedItems = filteredItems.reduce(
+    (acc, item) => {
+      const key = `${item.day} - ${item.meal}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    },
+    {} as Record<string, DonationItem[]>,
+  );
 
   const totalItems = items.length;
   const donatedItems = items.filter((item) => item.donated).length;
@@ -209,9 +214,23 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full">
-      <div className="max-w-6xl mx-auto px-2 sm:px-4 pt-6 sm:pt-8 flex justify-end w-full">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 pt-6 sm:pt-8 flex justify-between items-center gap-3 w-full">
+        {/* Botão Lista Integral */}
+        <Link
+          href="/lista-compras"
+          className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#d4af37] to-[#b8941f] hover:from-[#b8941f] hover:to-[#d4af37] text-white font-semibold rounded-full transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+        >
+          <FileText size={20} />
+          <span className="hidden sm:inline">Ver Lista Integral</span>
+          <span className="sm:hidden">Lista</span>
+        </Link>
+
+        {/* Botão Download Relatório */}
         <DownloadReportButton items={items} />
       </div>
+      {/* <div className="max-w-6xl mx-auto px-2 sm:px-4 pt-6 sm:pt-8 flex justify-end w-full">
+        <DownloadReportButton items={items} />
+      </div> */}
 
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-20 left-10 w-64 h-64 bg-blue-200 rounded-full opacity-20 blur-3xl animate-float"></div>
@@ -307,7 +326,7 @@ export default function Home() {
       <section className="max-w-6xl mx-auto px-2 sm:px-4 py-6 sm:py-8 pb-10 sm:pb-16">
         {Object.entries(groupedItems).map(([groupKey, groupItems]) => {
           const categoryDonated = groupItems.filter(
-            (item) => item.donated
+            (item) => item.donated,
           ).length;
           const categoryTotal = groupItems.length;
           const categoryProgress =
@@ -350,8 +369,8 @@ export default function Home() {
                           item.donated
                             ? "bg-gradient-to-r from-green-50 to-green-100 border-green-400 shadow-md"
                             : hasPartialDonations
-                            ? "bg-gradient-to-r from-blue-50 to-blue-100 border-blue-400 shadow-md"
-                            : "bg-white border-gray-200 hover:border-[#d4af37] hover:shadow-lg"
+                              ? "bg-gradient-to-r from-blue-50 to-blue-100 border-blue-400 shadow-md"
+                              : "bg-white border-gray-200 hover:border-[#d4af37] hover:shadow-lg"
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
@@ -361,8 +380,8 @@ export default function Home() {
                                 item.donated
                                   ? "text-green-800"
                                   : hasPartialDonations
-                                  ? "text-blue-800"
-                                  : "text-gray-800"
+                                    ? "text-blue-800"
+                                    : "text-gray-800"
                               }`}
                             >
                               {item.name}
@@ -406,7 +425,7 @@ export default function Home() {
                                             (item.donatedQuantity /
                                               item.totalQuantity) *
                                               100,
-                                            100
+                                            100,
                                           )}%`,
                                         }}
                                       ></div>
@@ -430,7 +449,7 @@ export default function Home() {
                                           </span>
                                         )}
                                       </p>
-                                    )
+                                    ),
                                   )}
                                 </div>
                               </div>
@@ -615,7 +634,7 @@ export default function Home() {
 
             {(() => {
               const { isMeasurable, unit, totalQuantity } = isMeasurableItem(
-                selectedItem.name
+                selectedItem.name,
               );
 
               if (!isMeasurable) return null;
