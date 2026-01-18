@@ -201,6 +201,10 @@ lint – análise estática
 
 seed – popular banco de dados
 
+Obs.: Sempre que for popular o banco, renomeie o arquivo seed-create.ts para seed.ts e execute o comando pnpm run seed.
+
+Caso você queira apenas atualizar a lista, adicionando mais itens ou ajustando quantidades, utilize o seed-update.ts. Renomeie-o para seed.ts, faça as alterações necessárias, salve o arquivo e execute novamente o comando pnpm run seed.
+
 ⭐ Desafio Técnico
 
 Este projeto foi desenvolvido sem bibliotecas de componentes prontos (ex: ShadCN UI).
