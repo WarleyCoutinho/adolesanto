@@ -45,11 +45,35 @@ export default function Home() {
     }
   };
 
+  // const isMeasurableItem = (
+  //   itemName: string,
+  // ): { isMeasurable: boolean; unit: string; totalQuantity: number } => {
+  //   const kgMatch = itemName.match(/(\d+(?:,\d+)?)\s*kg/i);
+  //   const literMatch = itemName.match(/(\d+(?:,\d+)?)\s*(?:litros?|lt?)/i);
+
+  //   if (kgMatch) {
+  //     const quantity = parseFloat(kgMatch[1].replace(",", "."));
+  //     return { isMeasurable: true, unit: "kg", totalQuantity: quantity };
+  //   }
+
+  //   if (literMatch) {
+  //     const quantity = parseFloat(literMatch[1].replace(",", "."));
+  //     return { isMeasurable: true, unit: "litro(s)", totalQuantity: quantity };
+  //   }
+
+  //   return { isMeasurable: false, unit: "", totalQuantity: 0 };
+  // };
+
   const isMeasurableItem = (
     itemName: string,
   ): { isMeasurable: boolean; unit: string; totalQuantity: number } => {
     const kgMatch = itemName.match(/(\d+(?:,\d+)?)\s*kg/i);
-    const literMatch = itemName.match(/(\d+(?:,\d+)?)\s*(?:litros?|lt?)/i);
+    const literMatch = itemName.match(
+      /(\d+(?:,\d+)?)\s*(?:litros?|lts?|lt?)\b/i,
+    );
+    const pacoteMatch = itemName.match(
+      /(\d+(?:,\d+)?)\s*(?:pacotes?|pcts?|pct|pt)(?:\s|$)/i,
+    );
 
     if (kgMatch) {
       const quantity = parseFloat(kgMatch[1].replace(",", "."));
@@ -59,6 +83,11 @@ export default function Home() {
     if (literMatch) {
       const quantity = parseFloat(literMatch[1].replace(",", "."));
       return { isMeasurable: true, unit: "litro(s)", totalQuantity: quantity };
+    }
+
+    if (pacoteMatch) {
+      const quantity = parseFloat(pacoteMatch[1].replace(",", "."));
+      return { isMeasurable: true, unit: "pacote(s)", totalQuantity: quantity };
     }
 
     return { isMeasurable: false, unit: "", totalQuantity: 0 };
