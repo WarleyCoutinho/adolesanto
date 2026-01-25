@@ -2,6 +2,34 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
 // Função auxiliar para detectar itens medidos em kg/litros
+// function parseItemQuantity(itemName: string): {
+//   requiresQuantity: boolean;
+//   totalQuantity: number | null;
+//   unit: string | null;
+// } {
+//   const kgMatch = itemName.match(/(\d+(?:[,\.]\d+)?)\s*kg/i);
+//   const literMatch = itemName.match(
+//     /(\d+(?:[,\.]\d+)?)\s*(?:litros?|lts?|l(?:\s|$))/i
+//   );
+
+//   if (kgMatch) {
+//     const quantity = parseFloat(kgMatch[1].replace(",", "."));
+//     return {
+//       requiresQuantity: true,
+//       totalQuantity: quantity,
+//       unit: "kg",
+//     };
+//   }
+
+//   if (literMatch) {
+//     const quantity = parseFloat(literMatch[1].replace(",", "."));
+//     return {
+//       requiresQuantity: true,
+//       totalQuantity: quantity,
+//       unit: "litros",
+//     };
+//   }
+
 function parseItemQuantity(itemName: string): {
   requiresQuantity: boolean;
   totalQuantity: number | null;
@@ -9,7 +37,10 @@ function parseItemQuantity(itemName: string): {
 } {
   const kgMatch = itemName.match(/(\d+(?:[,\.]\d+)?)\s*kg/i);
   const literMatch = itemName.match(
-    /(\d+(?:[,\.]\d+)?)\s*(?:litros?|lts?|l(?:\s|$))/i
+    /(\d+(?:[,\.]\d+)?)\s*(?:litros?|lts?|lt?)\b/i,
+  );
+  const pacoteMatch = itemName.match(
+    /(\d+(?:[,\.]\d+)?)\s*(?:pacotes?|pcts?|pct|pt)(?:\s|$)/i,
   );
 
   if (kgMatch) {
@@ -27,6 +58,15 @@ function parseItemQuantity(itemName: string): {
       requiresQuantity: true,
       totalQuantity: quantity,
       unit: "litros",
+    };
+  }
+
+  if (pacoteMatch) {
+    const quantity = parseFloat(pacoteMatch[1].replace(",", "."));
+    return {
+      requiresQuantity: true,
+      totalQuantity: quantity,
+      unit: "pacotes",
     };
   }
 
@@ -78,7 +118,7 @@ export async function GET() {
     console.error("Erro ao buscar itens:", error);
     return NextResponse.json(
       { error: "Erro ao buscar itens do banco de dados" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -102,7 +142,7 @@ export async function POST(request: NextRequest) {
     if (!itemId || !donorName || !donorPhone || !donationType) {
       return NextResponse.json(
         { error: "Dados incompletos. Preencha todos os campos obrigatórios." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -110,7 +150,7 @@ export async function POST(request: NextRequest) {
     if (donorName.trim().length < 3) {
       return NextResponse.json(
         { error: "Nome deve ter pelo menos 3 caracteres" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -123,7 +163,7 @@ export async function POST(request: NextRequest) {
     if (!["Item", "PIX"].includes(donationType)) {
       return NextResponse.json(
         { error: "Tipo de doação inválido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -131,7 +171,7 @@ export async function POST(request: NextRequest) {
     if (donationType === "PIX" && !pixFile) {
       return NextResponse.json(
         { error: "Comprovante PIX obrigatório para doações em dinheiro" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -140,7 +180,7 @@ export async function POST(request: NextRequest) {
       if (!partialQuantity || partialQuantity <= 0) {
         return NextResponse.json(
           { error: "Quantidade inválida para doação parcial" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -153,7 +193,7 @@ export async function POST(request: NextRequest) {
     if (!item) {
       return NextResponse.json(
         { error: "Item não encontrado" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -161,7 +201,7 @@ export async function POST(request: NextRequest) {
     if (item.donated && !item.requiresQuantity) {
       return NextResponse.json(
         { error: "Este item já foi doado por outra pessoa" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -185,7 +225,7 @@ export async function POST(request: NextRequest) {
       if (!quantityInfo.requiresQuantity) {
         return NextResponse.json(
           { error: "Este item não aceita doações parciais" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -197,10 +237,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error: `Quantidade excede o necessário. Restam apenas ${remainingQuantity.toFixed(
-              1
+              1,
             )} ${item.unit || quantityInfo.unit}`,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -220,7 +260,7 @@ export async function POST(request: NextRequest) {
       if (item.donated) {
         return NextResponse.json(
           { error: "Este item já foi completamente doado" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -309,7 +349,7 @@ export async function POST(request: NextRequest) {
         donation,
         message: successMessage,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Erro ao criar doação:", error);
@@ -318,13 +358,13 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message.includes("Unique constraint")) {
       return NextResponse.json(
         { error: "Erro ao processar doação" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     return NextResponse.json(
       { error: "Erro ao processar doação. Tente novamente." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
