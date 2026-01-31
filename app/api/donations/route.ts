@@ -1,35 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
-// Função auxiliar para detectar itens medidos em kg/litros
-// function parseItemQuantity(itemName: string): {
-//   requiresQuantity: boolean;
-//   totalQuantity: number | null;
-//   unit: string | null;
-// } {
-//   const kgMatch = itemName.match(/(\d+(?:[,\.]\d+)?)\s*kg/i);
-//   const literMatch = itemName.match(
-//     /(\d+(?:[,\.]\d+)?)\s*(?:litros?|lts?|l(?:\s|$))/i
-//   );
-
-//   if (kgMatch) {
-//     const quantity = parseFloat(kgMatch[1].replace(",", "."));
-//     return {
-//       requiresQuantity: true,
-//       totalQuantity: quantity,
-//       unit: "kg",
-//     };
-//   }
-
-//   if (literMatch) {
-//     const quantity = parseFloat(literMatch[1].replace(",", "."));
-//     return {
-//       requiresQuantity: true,
-//       totalQuantity: quantity,
-//       unit: "litros",
-//     };
-//   }
-
 function parseItemQuantity(itemName: string): {
   requiresQuantity: boolean;
   totalQuantity: number | null;

@@ -531,10 +531,18 @@ export default function Home() {
               <strong>💰 PIX (Doações em dinheiro):</strong>
             </p>
             <p className="text-lg sm:text-xl font-semibold text-[#3b82f6]">
-              (62) 99468-9297
+              (63) 99116-6920
             </p>
             <p className="text-gray-700">Banco: Neon Pagamentos S.A.</p>
-            <p className="text-gray-700">Warley Coutinho Pereira dos Santos</p>
+            <p className="text-gray-700">
+              Cleudinei Fernandes dos Santos Coutinho
+            </p>
+            <p className="text-sm sm:text-base text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+              <strong>⚠️ Observação:</strong> Mudamos a chave PIX. Continua o
+              mesmo banco, só mudou a chave e o destinatário. Não conseguimos
+              recuperar a chave antiga. Quando for fazer a doação, confirme os
+              dados acima.
+            </p>
           </div>
 
           <div className="border-t border-[#d4af37]/30 pt-4 sm:pt-6">
@@ -644,13 +652,13 @@ export default function Home() {
                   <div className="mt-2 p-3 rounded-lg border bg-gray-50">
                     <p className="text-sm text-gray-700 mb-2">
                       Chave PIX:
-                      <strong className="ml-1">(62) 99468-9297</strong>
+                      <strong className="ml-1">(63) 99116-6920</strong>
                     </p>
 
                     <button
                       type="button"
                       onClick={() =>
-                        navigator.clipboard.writeText("(62) 99468-9297")
+                        navigator.clipboard.writeText("(63) 99116-6920")
                       }
                       className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
                     >
