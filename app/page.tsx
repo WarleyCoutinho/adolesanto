@@ -658,7 +658,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() =>
-                        navigator.clipboard.writeText("(63) 99116-6920")
+                        navigator.clipboard.writeText("63991166920")
                       }
                       className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
                     >
