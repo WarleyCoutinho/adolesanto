@@ -243,6 +243,51 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full">
+      {/* <div className="relative min-h-screen pb-10 bg-gradient-to-br from-amber-50 via-white to-blue-50"> */}
+      {/* Banner de alerta animado */}
+      <div className="relative w-full bg-gradient-to-r from-red-600 via-red-500 to-red-600 py-3 overflow-hidden shadow-lg">
+        <div className="animate-scroll whitespace-nowrap">
+          <span className="inline-block text-white text-lg font-bold px-8">
+            ⚠️ ATENÇÃO! Falta menos de uma semana para o evento! Contamos com a
+            colaboração de todos. Quem ainda não doou, por favor, faça sua
+            doação conforme tocar o seu coração, se estiver em condições. Que
+            Deus lhe retribua em dobro 🙌 A todos que já fizeram a doação, o
+            nosso muito obrigado! Que Deus abençoe e retribua em dobro cada
+            gesto de amor ❤️ Já enviei mensagens em particular para combinar as
+            retiradas. Quem ainda não recebeu, por favor, me chame no WhatsApp:
+            62 99248-6492. Quem preferir, pode levar a doação nas missas de hoje
+            — estarei lá. E no domingo, a Mayra Oliveira estará recebendo.
+            Gratidão a todos! 💙🙏
+          </span>
+          <span className="inline-block text-white text-lg font-bold px-8">
+            ⚠️ ATENÇÃO! Falta menos de uma semana para o evento! Contamos com a
+            colaboração de todos. Quem ainda não doou, por favor, faça sua
+            doação conforme tocar o seu coração, se estiver em condições. Que
+            Deus lhe retribua em dobro 🙌 A todos que já fizeram a doação, o
+            nosso muito obrigado! Que Deus abençoe e retribua em dobro cada
+            gesto de amor ❤️ Já enviei mensagens em particular para combinar as
+            retiradas. Quem ainda não recebeu, por favor, me chame no WhatsApp:
+            62 99248-6492. Quem preferir, pode levar a doação nas missas de hoje
+            — estarei lá. E no domingo, a Mayra Oliveira estará recebendo.
+            Gratidão a todos! 💙🙏
+          </span>
+        </div>
+
+        <style jsx>{`
+          @keyframes scroll {
+            0% {
+              transform: translateX(0);
+            }
+            100% {
+              transform: translateX(-50%);
+            }
+          }
+          .animate-scroll {
+            display: inline-block;
+            animation: scroll 60s linear infinite;
+          }
+        `}</style>
+      </div>
       <div className="max-w-6xl mx-auto px-2 sm:px-4 pt-6 sm:pt-8 flex justify-between items-center gap-3 w-full">
         {/* Botão Lista Integral */}
         <Link
